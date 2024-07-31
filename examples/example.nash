@@ -1,0 +1,10 @@
+# Comments are fun!
+
+var template = "cheese";
+var test_identifier = "Blue ${template} and rice!";
+if 1 + 1 == 2 {
+  out(test_identifier);
+};
+
+var something = exec `echo something`;
+out(something);

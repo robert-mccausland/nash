@@ -1,0 +1,4 @@
+#!/bin/nash
+
+var output_file = "downloaded_file.txt";
+exec `curl https://example.com/file.txt` => output_file;

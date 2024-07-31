@@ -1,0 +1,7 @@
+services:
+  nash:
+    build:
+      context: .
+      dockerfile: docker/dockerfile
+    volumes:
+      - ./examples:/home/nash/scripts

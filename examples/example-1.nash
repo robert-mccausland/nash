@@ -1,0 +1,3 @@
+#!/bin/nash
+
+out(exec `df -h /` => `awk "NR==2 {print \$5}"` => `tr -d %`);

@@ -1,0 +1,8 @@
+#!/bin/nash
+
+func main() {
+  var test = "\"";
+  out(test);
+}
+
+main();
