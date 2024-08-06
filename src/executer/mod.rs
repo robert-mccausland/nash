@@ -9,8 +9,11 @@ use commands::{Command, CommandExecutor, StatusCode};
 use operators::execute_operator_expression;
 
 use crate::parser::{
-    code_blocks::CodeBlock, expressions::Expression, functions::Function, literals::StringLiteral,
-    statements::Statement,
+    code_blocks::CodeBlock,
+    expressions::{CaptureExitCode, Expression},
+    functions::Function,
+    literals::StringLiteral,
+    statements::{Assignment, Statement},
 };
 
 mod builtins;
@@ -67,6 +70,8 @@ pub enum Value {
     Integer(i32),
     Boolean(bool),
     Command(commands::Command),
+    ExitCode(u8),
+    Tuple(Vec<Value>),
 }
 
 struct ExecutorContext {
@@ -138,20 +143,50 @@ impl Executor {
         stack: &mut ExecutorStack,
     ) -> Result<(), ExecutionError> {
         match statement {
-            Statement::Assignment(variable_name, expression) => {
+            Statement::Assignment(assignment, expression) => {
                 let result = self.execute_expression(expression, stack)?;
-                if let Some(variable) = stack.variables.get_mut(&variable_name.value) {
-                    *variable = result;
-                } else {
-                    return Err(ExecutionError::new("Couldn't find variable".into()));
+                match assignment {
+                    Assignment::Simple(identifier) => {
+                        assign_variable(result, &identifier.value, stack)?;
+                    }
+                    Assignment::Tuple(identifiers) => {
+                        let Value::Tuple(result) = result else {
+                            return Err(
+                                "Can't use a tuple assignment with a non-tuple value".into()
+                            );
+                        };
+
+                        if identifiers.len() > result.len() {
+                            return Err("Not enough values in tuple to fill assignment".into());
+                        }
+
+                        for (identifier, result) in identifiers.iter().zip(result) {
+                            assign_variable(result, &identifier.value, stack)?;
+                        }
+                    }
                 }
             }
-            Statement::Declaration(variable_name, expression) => {
-                if let Some(_) = stack.variables.get(&variable_name.value) {
-                    return Err(ExecutionError::new("Variable already exists".into()));
-                } else {
-                    let result = self.execute_expression(expression, stack)?;
-                    stack.variables.insert(variable_name.value.clone(), result);
+            Statement::Declaration(assignment, expression) => {
+                let result = self.execute_expression(expression, stack)?;
+                match assignment {
+                    Assignment::Simple(identifier) => {
+                        declare_variable(result, &identifier.value, stack)?;
+                    }
+                    Assignment::Tuple(identifiers) => {
+                        let Value::Tuple(result) = result else {
+                            return Err(
+                                "Can't use a tuple assignment with a non-tuple value".into()
+                            );
+                        };
+
+                        if identifiers.len() > result.len() {
+                            return Err("Not enough values in tuple to fill assignment".into());
+                        }
+
+                        for (identifier, result) in identifiers.iter().zip(result) {
+                            declare_variable(result, &identifier.value, stack)?;
+                        }
+                    }
                 }
             }
             Statement::Expression(expression) => {
@@ -174,6 +209,12 @@ impl Executor {
             Expression::BooleanLiteral(boolean) => Ok(Value::Boolean(*boolean)),
             Expression::IntegerLiteral(integer) => Ok(Value::Integer(*integer)),
             Expression::Variable(variable_name) => resolve_variable(&variable_name.value, stack),
+            Expression::Tuple(elements) => Ok(Value::Tuple(
+                elements
+                    .iter()
+                    .map(|expression| self.execute_expression(expression, stack))
+                    .collect::<Result<Vec<_>, _>>()?,
+            )),
             Expression::Command(command) => {
                 let mut command = command.iter();
                 return Ok(Value::Command(Command::new(
@@ -213,22 +254,43 @@ impl Executor {
                 }
                 return Ok(Value::Void);
             }
-            Expression::Execute(expression) => {
+            Expression::Execute(expression, capture_exit_code) => {
                 if let Value::Command(command) = self.execute_expression(expression, stack)? {
                     let result = self.context.command_executor.run(&command).map_err(|err| {
                         ExecutionError::new(format!("Error running command: {:}", err))
                     })?;
 
-                    return match result.status_code {
-                        StatusCode::Error(code) => Err(ExecutionError::new(format!(
-                            "Command exited with non-zero exit code ({:})",
-                            code
-                        ))),
+                    let (return_value, exit_code) = match result.status_code {
                         StatusCode::Terminated => {
-                            Err(ExecutionError::new(format!("Command was terminated",)))
+                            return Err(ExecutionError::new(format!("Command was terminated")))
                         }
-                        StatusCode::Ok => Ok(Value::String(result.stdout)),
+                        StatusCode::Value(code) => (
+                            Value::Tuple(vec![
+                                Value::String(result.stdout),
+                                Value::String(result.stderr),
+                            ]),
+                            code,
+                        ),
                     };
+
+                    match capture_exit_code {
+                        Some(CaptureExitCode::Assignment(identifier)) => {
+                            assign_variable(Value::ExitCode(exit_code), &identifier.value, stack)?;
+                        }
+                        Some(CaptureExitCode::Declaration(identifier)) => {
+                            declare_variable(Value::ExitCode(exit_code), &identifier.value, stack)?;
+                        }
+                        None => {
+                            if exit_code != 0 {
+                                return Err(ExecutionError::new(format!(
+                                    "Command returned non-zero exit code: ({:})",
+                                    exit_code
+                                )));
+                            }
+                        }
+                    }
+
+                    return Ok(return_value);
                 }
 
                 return Err(ExecutionError::new("Must execute a command".to_owned()));
@@ -277,14 +339,44 @@ fn resolve_variable(variable_name: &str, stack: &ExecutorStack) -> Result<Value,
         .clone())
 }
 
+fn assign_variable(
+    value: Value,
+    variable_name: &str,
+    stack: &mut ExecutorStack,
+) -> Result<(), ExecutionError> {
+    if let Some(variable) = stack.variables.get_mut(variable_name) {
+        *variable = value;
+    } else {
+        return Err("Couldn't find variable".into());
+    }
+
+    Ok(())
+}
+
+fn declare_variable(
+    value: Value,
+    variable_name: &str,
+    stack: &mut ExecutorStack,
+) -> Result<(), ExecutionError> {
+    if let Some(_) = stack.variables.get(variable_name) {
+        return Err(ExecutionError::new("Variable already exists".into()));
+    } else {
+        stack.variables.insert(variable_name.to_owned(), value);
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::{self, Read};
 
-    use commands::CommandOutput;
+    use commands::CommandResult;
     use mockall::{mock, predicate};
 
-    use crate::parser::{functions::Function, literals::StringLiteral, operators::Operator};
+    use crate::parser::{
+        functions::Function, literals::StringLiteral, operators::Operator, statements::Assignment,
+    };
 
     use super::*;
 
@@ -292,7 +384,7 @@ mod tests {
         pub CommandExecutor {}
 
         impl CommandExecutor for CommandExecutor {
-            fn run(&self, command: &Command) -> io::Result<CommandOutput>;
+            fn run(&self, command: &Command) -> io::Result<CommandResult>;
         }
     }
 
@@ -328,11 +420,11 @@ mod tests {
                     functions: vec![],
                     statements: vec![
                         Statement::Declaration(
-                            "template".into(),
+                            Assignment::Simple("template".into()),
                             Expression::StringLiteral("cheese".into()),
                         ),
                         Statement::Declaration(
-                            "test_identifier".into(),
+                            Assignment::Simple("test_identifier".into()),
                             Expression::StringLiteral(StringLiteral::new(
                                 vec![("Blue \"".to_owned(), "template".into())],
                                 "\" and rice!".to_owned(),
@@ -361,9 +453,10 @@ mod tests {
                             )],
                             None,
                         )),
-                        Statement::Expression(Expression::Execute(Box::new(Expression::Command(
-                            vec!["echo".into(), "something".into()],
-                        )))),
+                        Statement::Expression(Expression::Execute(
+                            Box::new(Expression::Command(vec!["echo".into(), "something".into()])),
+                            None,
+                        )),
                     ],
                 },
             }],
@@ -385,9 +478,10 @@ mod tests {
                 vec!["something".to_owned()],
             )))
             .return_once(|_| {
-                Ok(CommandOutput {
+                Ok(CommandResult {
                     status_code: 0.into(),
                     stdout: "something".to_owned(),
+                    stderr: "".to_owned(),
                 })
             })
             .once();

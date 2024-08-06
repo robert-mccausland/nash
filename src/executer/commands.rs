@@ -6,52 +6,76 @@ use std::{
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Command {
-    inner: Vec<(String, Vec<String>)>,
-    output_file: Option<String>,
+    command: String,
+    arguments: Vec<String>,
+    output: Option<CommandOutput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CommandOutput {
+    destination: OutputDestination,
+    source: OutputSource,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum OutputDestination {
+    File(String),
+    Command(Box<Command>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OutputSource {
+    Stdout,
+    Stderr,
+    All,
 }
 
 impl Command {
     pub fn new(command: String, arguments: Vec<String>) -> Self {
         Self {
-            inner: vec![(command, arguments)],
-            output_file: None,
+            command,
+            arguments,
+            output: None,
         }
     }
 
-    pub fn pipe(&self, next: &Command) -> Self {
-        let mut inner = self.inner.clone();
-        inner.append(&mut next.inner.clone());
-        Self {
-            inner,
-            output_file: None,
+    fn try_pipe(&self, destination: OutputDestination, source: OutputSource) -> Option<Self> {
+        let mut result = self.clone();
+        let mut inner = &mut result;
+        while let Some(ref mut output) = inner.output {
+            if let OutputDestination::Command(ref mut command) = output.destination {
+                inner = command.as_mut()
+            } else {
+                return None;
+            }
         }
+
+        inner.output = Some(CommandOutput {
+            destination,
+            source,
+        });
+
+        Some(result)
     }
 
-    pub fn pipe_file(&self, file: String) -> Self {
-        Self {
-            inner: self.inner.clone(),
-            output_file: file.into(),
-        }
+    pub fn try_pipe_command(&self, command: Command, source: OutputSource) -> Option<Self> {
+        self.try_pipe(OutputDestination::Command(Box::new(command)), source)
     }
 
-    pub fn has_file(&self) -> bool {
-        self.output_file.is_some()
+    pub fn try_pipe_file(&self, file: String, source: OutputSource) -> Option<Self> {
+        self.try_pipe(OutputDestination::File(file), source)
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum StatusCode {
-    Ok,
     Terminated,
-    Error(u8),
+    Value(u8),
 }
 
 impl From<i32> for StatusCode {
     fn from(value: i32) -> Self {
-        match value {
-            0 => Self::Ok,
-            x => Self::Error(x.to_le_bytes()[0]),
-        }
+        Self::Value(value.to_le_bytes()[0])
     }
 }
 
@@ -65,61 +89,88 @@ impl From<Option<i32>> for StatusCode {
 }
 
 #[derive(Debug, Clone)]
-pub struct CommandOutput {
+pub struct CommandResult {
     pub status_code: StatusCode,
     pub stdout: String,
+    pub stderr: String,
 }
 
 pub trait CommandExecutor {
-    fn run(&self, command: &Command) -> io::Result<CommandOutput>;
+    fn run(&self, command: &Command) -> io::Result<CommandResult>;
 }
 
 pub struct SystemCommandExecutor;
 
 impl CommandExecutor for SystemCommandExecutor {
-    fn run(&self, command: &Command) -> io::Result<CommandOutput> {
+    fn run(&self, command: &Command) -> io::Result<CommandResult> {
         let mut stdout = None;
-        let mut commands = command
-            .inner
-            .iter()
-            .map(|(command, arguments)| {
-                let mut command = process::Command::new(command);
-                command.args(arguments);
-                command.stdin(Stdio::piped());
-                command.stdout(Stdio::piped());
-                if let Some(stdout) = stdout.take() {
-                    command.stdin(Stdio::from(stdout));
+        let mut stderr = None;
+        let mut input_source = None;
+        let mut command = command;
+        let mut processes = Vec::new();
+        loop {
+            let mut process = process::Command::new(command.command.to_owned());
+            process.args(command.arguments.to_owned());
+            process.stdin(Stdio::piped());
+            process.stdout(Stdio::piped());
+            process.stderr(Stdio::piped());
+
+            if let Some(input_source) = input_source {
+                match input_source {
+                    OutputSource::Stdout => {
+                        process.stdin(Stdio::from(stdout.unwrap()));
+                    }
+                    OutputSource::Stderr => todo!(),
+                    OutputSource::All => todo!(),
                 }
+            }
 
-                let mut command = command.spawn()?;
-                stdout = command.stdout.take();
-                return Ok(command);
-            })
-            .collect::<io::Result<Vec<_>>>()?;
+            let mut process = process.spawn()?;
+            stdout = process.stdout.take();
+            stderr = process.stderr.take();
+            processes.push(process);
 
-        let mut status_code = StatusCode::Ok;
-        for command in &mut commands {
-            let output = command.wait()?;
+            let Some(ref output) = command.output else {
+                break;
+            };
+
+            input_source = Some(output.source.clone());
+
+            match &output.destination {
+                OutputDestination::File(file) => {
+                    copy(&mut stdout.take().unwrap(), &mut File::create(file)?)?;
+                    break;
+                }
+                OutputDestination::Command(nested_command) => command = nested_command.as_ref(),
+            }
+        }
+
+        let mut status_code = StatusCode::Value(0);
+        let mut stdout_data = String::new();
+        if let Some(mut stdout) = stdout {
+            stdout.read_to_string(&mut stdout_data)?;
+            stdout_data.truncate(stdout_data.trim_end().len());
+        }
+
+        let mut stderr_data = String::new();
+        if let Some(mut stderr) = stderr {
+            stderr.read_to_string(&mut stderr_data)?;
+            stderr_data.truncate(stderr_data.trim_end().len());
+        }
+
+        for process in &mut processes {
+            let result = process.wait()?;
 
             // Only update status code if all previous commands were successful
-            if matches!(status_code, StatusCode::Ok) {
-                status_code = output.code().into();
+            if matches!(status_code, StatusCode::Value(0)) {
+                status_code = result.code().into();
             }
         }
 
-        let mut output = String::new();
-        if let Some(mut stdout) = stdout {
-            if let Some(output_file) = command.output_file.as_ref() {
-                copy(&mut stdout, &mut File::create(output_file)?)?;
-            } else {
-                stdout.read_to_string(&mut output)?;
-                output.truncate(output.trim_end().len());
-            }
-        }
-
-        return Ok(CommandOutput {
+        return Ok(CommandResult {
             status_code,
-            stdout: output,
+            stdout: stdout_data,
+            stderr: stderr_data,
         });
     }
 }

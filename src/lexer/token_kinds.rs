@@ -1,3 +1,5 @@
+use crate::keywords::KEYWORDS;
+
 use super::{LexerContext, TokenValue};
 
 const SEMICOLON: &str = ";";
@@ -13,12 +15,12 @@ const LEFT_CURLY: &str = "{";
 const RIGHT_CURLY: &str = "}";
 const LEFT_ANGLE: &str = "<";
 const RIGHT_ANGLE: &str = ">";
+const QUESTION: &str = "?";
 const DOLLAR: &str = "$";
 const ESCAPED_DOLLAR: &str = "\\$";
 const BACKTICK: &str = "`";
 const ESCAPED_BACKTICK: &str = "\\`";
 const NEWLINES: [&str; 2] = ["\n", "\r\n"];
-const KEYWORDS: [&str; 5] = ["if", "else", "func", "var", "exec"];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenKind {
@@ -34,6 +36,7 @@ pub enum TokenKind {
     RightCurly,
     LeftAngle,
     RightAngle,
+    Question,
     Semicolon,
     Comma,
     DoubleQuote,
@@ -57,6 +60,7 @@ impl TokenKind {
             TokenKind::RightCurly => Some(TokenValue::RightCurly()),
             TokenKind::LeftAngle => Some(TokenValue::LeftAngle()),
             TokenKind::RightAngle => Some(TokenValue::RightAngle()),
+            TokenKind::Question => Some(TokenValue::Question()),
             TokenKind::Semicolon => Some(TokenValue::Semicolon()),
             TokenKind::Comma => Some(TokenValue::Comma()),
             TokenKind::DoubleQuote => Some(TokenValue::DoubleQuote()),
@@ -93,6 +97,7 @@ pub fn try_get_token_kind(
             RIGHT_CURLY => Some(TokenKind::RightCurly),
             LEFT_ANGLE => Some(TokenKind::LeftAngle),
             RIGHT_ANGLE => Some(TokenKind::RightAngle),
+            QUESTION => Some(TokenKind::Question),
             SEMICOLON => Some(TokenKind::Semicolon),
             COMMA => Some(TokenKind::Comma),
             _ => {
@@ -496,5 +501,11 @@ mod tests {
             Some(TokenKind::RightCurly),
             vec![LexerContext::Root, LexerContext::String]
         )
+    );
+
+    test_case!(
+        should_parse_question,
+        ("?", vec![LexerContext::Root]),
+        (Some(TokenKind::Question))
     );
 }

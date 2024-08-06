@@ -1,6 +1,6 @@
 use crate::parser::operators::Operator;
 
-use super::{ExecutionError, Value};
+use super::{commands::OutputSource, ExecutionError, Value};
 
 pub fn execute_operator_expression(
     operator: &Operator,
@@ -20,16 +20,15 @@ pub fn execute_operator_expression(
         (Operator::Equals, Value::Integer(left), Value::Integer(right)) => {
             Ok(Value::Boolean(left == right))
         }
-        (Operator::Pipe, Value::Command(left), Value::Command(right)) => {
-            Ok(Value::Command(left.pipe(&right)))
-        }
-        (Operator::Pipe, Value::Command(left), Value::String(right)) => {
-            if left.has_file() {
-                Err("Command already has a file it is piping to".into())
-            } else {
-                Ok(Value::Command(left.pipe_file(right)))
-            }
-        }
+        (Operator::Pipe, Value::Command(left), Value::Command(right)) => Ok(Value::Command(
+            left.try_pipe_command(right, OutputSource::Stdout)
+                .ok_or::<ExecutionError>("Command already has a file it is piping to".into())?,
+        )),
+        (Operator::Pipe, Value::Command(left), Value::String(right)) => Ok(Value::Command(
+            left.try_pipe_file(right, OutputSource::Stdout)
+                .ok_or::<ExecutionError>("Command already has a file it is piping to".into())?,
+        )),
+
         (operator, left, right) => Err(ExecutionError::new(format!(
             "Invalid operator expression {left:?} {operator:?} {right:?}."
         ))),

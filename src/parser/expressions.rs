@@ -1,4 +1,7 @@
-use crate::lexer::{Token, TokenValue};
+use crate::{
+    keywords::VAR,
+    lexer::{Token, TokenValue},
+};
 
 use super::{
     code_blocks::{parse_code_block, CodeBlock},
@@ -12,12 +15,20 @@ pub enum Expression {
     StringLiteral(StringLiteral),
     BooleanLiteral(bool),
     IntegerLiteral(i32),
+    Tuple(Vec<Expression>),
     Variable(Identifier),
     Command(Vec<StringLiteral>),
     Operation(Box<Expression>, Operator, Box<Expression>),
     If(Vec<(Expression, CodeBlock)>, Option<CodeBlock>),
     FunctionCall(Identifier, Vec<Expression>),
-    Execute(Box<Expression>),
+    Execute(Box<Expression>, Option<CaptureExitCode>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+
+pub enum CaptureExitCode {
+    Assignment(Identifier),
+    Declaration(Identifier),
 }
 
 pub(super) fn parse_expression<'a, I: Iterator<Item = Token<'a>>>(
@@ -112,7 +123,29 @@ fn parse_base_expression<'a, I: Iterator<Item = Token<'a>>>(
         }
         if *keyword == "exec" {
             let expression = parse_expression(tokens)?;
-            return Ok(Expression::Execute(Box::new(expression)));
+            if let Some(TokenValue::Question()) = tokens.next().map(|x| x.value) {
+                let token = tokens.next().map(|x| x.value);
+                if let Some(TokenValue::Keyword(VAR)) = token {
+                    let Some(TokenValue::Identifier(identifier)) = tokens.next().map(|x| x.value)
+                    else {
+                        return Err("var must be followed by identifier".into());
+                    };
+                    return Ok(Expression::Execute(
+                        Box::new(expression),
+                        Some(CaptureExitCode::Declaration(identifier.into())),
+                    ));
+                } else if let Some(TokenValue::Identifier(identifier)) = token {
+                    return Ok(Expression::Execute(
+                        Box::new(expression),
+                        Some(CaptureExitCode::Assignment(identifier.into())),
+                    ));
+                } else {
+                    return Err("? must be followed by an var or identifier".into());
+                }
+            } else {
+                tokens.backtrack();
+                return Ok(Expression::Execute(Box::new(expression), None));
+            }
         }
 
         if *keyword == "false" {
@@ -122,6 +155,27 @@ fn parse_base_expression<'a, I: Iterator<Item = Token<'a>>>(
         if *keyword == "true" {
             return Ok(Expression::BooleanLiteral(true));
         }
+    }
+
+    if let Some(TokenValue::LeftBracket()) = token {
+        let mut expressions = Vec::new();
+        if let Some(TokenValue::RightBracket()) = tokens.next().map(|x| x.value) {
+        } else {
+            tokens.backtrack();
+            loop {
+                expressions.push(parse_expression(tokens)?);
+
+                let next = tokens.next().map(|x| x.value);
+                let Some(TokenValue::Comma()) = next else {
+                    if let Some(TokenValue::RightBracket()) = next {
+                        break;
+                    }
+                    return Err("Expected , or ) after tuple value".into());
+                };
+            }
+        }
+
+        return Ok(Expression::Tuple(expressions));
     }
 
     return Err("Unable to parse expression".into());

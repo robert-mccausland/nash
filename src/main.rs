@@ -10,6 +10,7 @@ use lexer::LexerError;
 use parser::ParserError;
 
 mod executer;
+mod keywords;
 mod lexer;
 mod parser;
 

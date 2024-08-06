@@ -24,7 +24,7 @@ impl From<&str> for Identifier {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct ParserError {
     message: String,
 }
@@ -89,7 +89,11 @@ where
     }
 
     fn backtrack(&mut self) {
-        self.position += 1;
+        self.backtrack_n(1);
+    }
+
+    fn backtrack_n(&mut self, n: usize) {
+        self.position += n;
 
         if self.position > self.history.len() {
             panic!("Cannot backtrack past the start of the iterator")
@@ -143,9 +147,12 @@ mod tests {
     use functions::Function;
     use literals::StringLiteral;
     use operators::Operator;
-    use statements::Statement;
+    use statements::{Assignment, Statement};
 
-    use crate::lexer::{FilePosition, TokenValue};
+    use crate::{
+        keywords::{EXEC, VAR},
+        lexer::{FilePosition, TokenValue},
+    };
 
     use super::*;
 
@@ -202,9 +209,7 @@ mod tests {
             TokenValue::LeftBracket(),
             TokenValue::RightBracket(),
             TokenValue::Semicolon(),
-        ]
-        .into_iter()
-        .map(|value| Token::new(value, FilePosition::new(0, 0), FilePosition::new(0, 0)));
+        ];
 
         let expected_syntax_tree = CodeBlock {
             functions: vec![Function {
@@ -214,11 +219,11 @@ mod tests {
                     functions: vec![],
                     statements: vec![
                         Statement::Declaration(
-                            "template".into(),
+                            Assignment::Simple("template".into()),
                             Expression::StringLiteral("cheese".into()),
                         ),
                         Statement::Declaration(
-                            "test_identifier".into(),
+                            Assignment::Simple("test_identifier".into()),
                             Expression::StringLiteral(StringLiteral::new(
                                 vec![("Blue \"".to_owned(), "template".into())],
                                 "\" and rice!".to_owned(),
@@ -247,9 +252,10 @@ mod tests {
                             )],
                             None,
                         )),
-                        Statement::Expression(Expression::Execute(Box::new(Expression::Command(
-                            vec!["echo".into(), "something".into()],
-                        )))),
+                        Statement::Expression(Expression::Execute(
+                            Box::new(Expression::Command(vec!["echo".into(), "something".into()])),
+                            None,
+                        )),
                     ],
                 },
             }],
@@ -259,8 +265,79 @@ mod tests {
             ))],
         };
 
-        let syntax_tree = parse(tokens).unwrap();
+        parser_test(tokens, Ok(expected_syntax_tree));
+    }
 
-        assert_eq!(syntax_tree, expected_syntax_tree);
+    #[test]
+    fn should_parse_tuple_declaration() {
+        let tokens = vec![
+            TokenValue::Keyword("var"),
+            TokenValue::LeftBracket(),
+            TokenValue::Identifier("one"),
+            TokenValue::Comma(),
+            TokenValue::Identifier("two"),
+            TokenValue::RightBracket(),
+            TokenValue::Equals(),
+            TokenValue::LeftBracket(),
+            TokenValue::DoubleQuote(),
+            TokenValue::StringLiteral("hi"),
+            TokenValue::DoubleQuote(),
+            TokenValue::Comma(),
+            TokenValue::IntegerLiteral("123"),
+            TokenValue::RightBracket(),
+            TokenValue::Semicolon(),
+        ];
+
+        let expected_tree = CodeBlock {
+            functions: vec![],
+            statements: vec![Statement::Declaration(
+                Assignment::Tuple(vec!["one".into(), "two".into()]),
+                Expression::Tuple(vec![
+                    Expression::StringLiteral("hi".into()),
+                    Expression::IntegerLiteral(123),
+                ]),
+            )],
+        };
+
+        parser_test(tokens, Ok(expected_tree));
+    }
+
+    #[test]
+    fn should_parse_exec_exit_code_capture() {
+        let tokens = vec![
+            TokenValue::Keyword(EXEC),
+            TokenValue::Backtick(),
+            TokenValue::StringLiteral("test"),
+            TokenValue::Backtick(),
+            TokenValue::Question(),
+            TokenValue::Keyword(VAR),
+            TokenValue::Identifier("exit_code"),
+            TokenValue::Semicolon(),
+        ];
+
+        let expected_tree = CodeBlock {
+            functions: vec![],
+            statements: vec![Statement::Expression(Expression::Execute(
+                Box::new(Expression::Command(vec!["test".into()])),
+                Some(expressions::CaptureExitCode::Declaration(
+                    "exit_code".into(),
+                )),
+            ))],
+        };
+
+        parser_test(tokens, Ok(expected_tree));
+    }
+
+    fn parser_test(tokens: Vec<TokenValue>, expected_tree: Result<CodeBlock, ParserError>) {
+        let tree = parse(
+            tokens
+                .into_iter()
+                .map(|value| Token::new(value, FilePosition::new(0, 0), FilePosition::new(0, 0))),
+        );
+
+        assert_eq!(
+            tree, expected_tree,
+            "Checking expected tree matches actual tree, actual on left"
+        )
     }
 }
