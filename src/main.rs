@@ -9,7 +9,7 @@ use std::{
 use executer::{commands::SystemCommandExecutor, Executor};
 
 mod executer;
-mod keywords;
+mod constants;
 mod lexer;
 mod parser;
 

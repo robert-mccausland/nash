@@ -8,12 +8,15 @@ use std::{
 use commands::{Command, CommandExecutor, StatusCode};
 use operators::execute_operator_expression;
 
-use crate::parser::{
-    code_blocks::CodeBlock,
-    expressions::{CaptureExitCode, Expression},
-    functions::Function,
-    literals::StringLiteral,
-    statements::{Assignment, Statement},
+use crate::{
+    constants::UNDERSCORE,
+    parser::{
+        code_blocks::CodeBlock,
+        expressions::{CaptureExitCode, Expression},
+        functions::Function,
+        literals::StringLiteral,
+        statements::{Assignment, Statement},
+    },
 };
 
 mod builtins;
@@ -63,8 +66,9 @@ impl Error for ExecutionError {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum Value {
+    #[default]
     Void,
     String(String),
     Integer(i32),
@@ -218,14 +222,17 @@ impl Executor {
             Statement::Expression(expression) => {
                 let value = self.execute_expression(expression, stack)?;
 
-                if let Err(err) = writeln!(&mut self.context.stdout, "{:}", value) {
-                    return Err(ExecutionError::new(format!(
-                        "Error writing to stdout: {err}"
-                    )));
-                }
+                if let Value::Void = value {
+                } else {
+                    if let Err(err) = writeln!(&mut self.context.stdout, "{:}", value) {
+                        return Err(ExecutionError::new(format!(
+                            "Error writing to stdout: {err}"
+                        )));
+                    }
 
-                if let Err(err) = self.context.stdout.flush() {
-                    return Err(ExecutionError::new(format!("Error flushing stdout: {err}")));
+                    if let Err(err) = self.context.stdout.flush() {
+                        return Err(ExecutionError::new(format!("Error flushing stdout: {err}")));
+                    }
                 }
             }
         };
@@ -355,6 +362,20 @@ impl Executor {
                     builtins::call_builtin(&name.value, args.as_slice(), &mut self.context)
                 }
             }
+            Expression::Get(base_expression, index) => {
+                let Value::Tuple(mut values) = self.execute_expression(base_expression, stack)?
+                else {
+                    return Err("Cannot use get expression on non-tuple value".into());
+                };
+
+                let len = values.len();
+                let result = values.get_mut(*index as usize).ok_or(format!(
+                    "Cannot get element at index {:} because tuple only has {:} elements",
+                    index, len
+                ))?;
+
+                return Ok(core::mem::take(result));
+            }
         }
     }
 }
@@ -388,6 +409,10 @@ fn assign_variable(
     variable_name: &str,
     stack: &mut ExecutorStack,
 ) -> Result<(), ExecutionError> {
+    if variable_name == UNDERSCORE {
+        return Ok(());
+    }
+
     if let Some(variable) = stack.variables.get_mut(variable_name) {
         *variable = value;
     } else {
@@ -402,6 +427,9 @@ fn declare_variable(
     variable_name: &str,
     stack: &mut ExecutorStack,
 ) -> Result<(), ExecutionError> {
+    if variable_name == UNDERSCORE {
+        return Ok(());
+    }
     if let Some(_) = stack.variables.get(variable_name) {
         return Err(ExecutionError::new("Variable already exists".into()));
     } else {
@@ -487,20 +515,23 @@ mod tests {
                                 ),
                                 CodeBlock {
                                     functions: vec![],
-                                    statements: vec![Statement::Expression(
-                                        Expression::FunctionCall(
-                                            "out".into(),
-                                            vec![Expression::Variable("test_identifier".into())],
-                                        ),
-                                    )],
+                                    statements: vec![Statement::Expression(Expression::Variable(
+                                        "test_identifier".into(),
+                                    ))],
                                 },
                             )],
                             None,
                         )),
-                        Statement::Expression(Expression::Execute(
-                            Box::new(Expression::Command(vec!["echo".into(), "something".into()])),
-                            None,
-                        )),
+                        Statement::Assignment(
+                            Assignment::Simple("_".into()),
+                            Expression::Execute(
+                                Box::new(Expression::Command(vec![
+                                    "echo".into(),
+                                    "something".into(),
+                                ])),
+                                None,
+                            ),
+                        ),
                     ],
                 },
             }],

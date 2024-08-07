@@ -1,12 +1,12 @@
 use crate::{
-    keywords::VAR,
+    constants::{ELSE, EXEC, FALSE, IF, TRUE, VAR},
     lexer::{Token, TokenValue},
 };
 
 use super::{
     code_blocks::{parse_code_block, CodeBlock},
     literals::{parse_integer, parse_string_literal, StringLiteral},
-    operators::{parse_operator, Operator},
+    operators::{try_parse_operator, Operator},
     Backtrackable, Identifier, ParserError,
 };
 
@@ -22,6 +22,7 @@ pub enum Expression {
     If(Vec<(Expression, CodeBlock)>, Option<CodeBlock>),
     FunctionCall(Identifier, Vec<Expression>),
     Execute(Box<Expression>, Option<CaptureExitCode>),
+    Get(Box<Expression>, u32),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,15 +36,49 @@ pub(super) fn parse_expression<'a, I: Iterator<Item = Token<'a>>>(
     tokens: &mut Backtrackable<I>,
 ) -> Result<Expression, ParserError> {
     let mut expression = parse_base_expression(tokens)?;
-    while let Some(operator) = parse_operator(tokens) {
-        expression = Expression::Operation(
-            Box::new(expression),
-            operator,
-            Box::new(parse_base_expression(tokens)?),
-        );
+    while let Some(continuation) = parse_expression_continuation(tokens) {
+        expression = match continuation {
+            ExpressionContinuation::Operator(operator) => Expression::Operation(
+                Box::new(expression),
+                operator,
+                Box::new(parse_base_expression(tokens)?),
+            ),
+            ExpressionContinuation::Get(index) => Expression::Get(Box::new(expression), index),
+        }
     }
 
     return Ok(expression);
+}
+
+enum ExpressionContinuation {
+    Operator(Operator),
+    Get(u32),
+}
+
+fn parse_expression_continuation<'a, I: Iterator<Item = Token<'a>>>(
+    tokens: &mut Backtrackable<I>,
+) -> Option<ExpressionContinuation> {
+    if let Some(operator) = try_parse_operator(tokens) {
+        Some(ExpressionContinuation::Operator(operator))
+    } else if let Some(identifier) = try_parse_get(tokens) {
+        Some(ExpressionContinuation::Get(identifier))
+    } else {
+        None
+    }
+}
+
+fn try_parse_get<'a, I: Iterator<Item = Token<'a>>>(tokens: &mut Backtrackable<I>) -> Option<u32> {
+    let Some(TokenValue::Dot()) = tokens.next().map(|x| x.value) else {
+        tokens.backtrack();
+        return None;
+    };
+
+    let Some(TokenValue::IntegerLiteral(integer)) = tokens.next().map(|x| x.value) else {
+        tokens.backtrack_n(2);
+        return None;
+    };
+
+    return u32::from_str_radix(integer, 10).into_iter().next();
 }
 
 fn parse_base_expression<'a, I: Iterator<Item = Token<'a>>>(
@@ -108,10 +143,10 @@ fn parse_base_expression<'a, I: Iterator<Item = Token<'a>>>(
     }
 
     if let Some(TokenValue::Keyword(ref keyword)) = token {
-        if *keyword == "if" {
+        if *keyword == IF {
             let expression = parse_expression(tokens)?;
             let block = parse_code_block(tokens, false)?;
-            if let Some(TokenValue::Keyword("else")) = tokens.next().map(|x| x.value) {
+            if let Some(TokenValue::Keyword(ELSE)) = tokens.next().map(|x| x.value) {
                 return Ok(Expression::If(
                     vec![(expression, block)],
                     Some(parse_code_block(tokens, false)?),
@@ -121,7 +156,7 @@ fn parse_base_expression<'a, I: Iterator<Item = Token<'a>>>(
                 return Ok(Expression::If(vec![(expression, block)], None));
             }
         }
-        if *keyword == "exec" {
+        if *keyword == EXEC {
             let expression = parse_expression(tokens)?;
             if let Some(TokenValue::Question()) = tokens.next().map(|x| x.value) {
                 let token = tokens.next().map(|x| x.value);
@@ -148,11 +183,11 @@ fn parse_base_expression<'a, I: Iterator<Item = Token<'a>>>(
             }
         }
 
-        if *keyword == "false" {
+        if *keyword == FALSE {
             return Ok(Expression::BooleanLiteral(false));
         }
 
-        if *keyword == "true" {
+        if *keyword == TRUE {
             return Ok(Expression::BooleanLiteral(true));
         }
     }

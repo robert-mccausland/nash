@@ -13,6 +13,8 @@ pub fn call_builtin(
         ("parse_int", [Value::String(arg1)]) => Ok(Value::Integer(parse_int(arg1)?)),
         ("in", []) => r#in(context),
         ("err", [Value::String(arg1)]) => err(context, arg1),
+        ("out", [Value::String(arg1)]) => out(context, arg1),
+        ("fmt", [arg1]) => fmt(context, arg1),
         (name, args) => {
             let args = args
                 .iter()
@@ -91,4 +93,8 @@ fn err(context: &mut ExecutorContext, value: &str) -> Result<Value, ExecutionErr
     }
 
     return Ok(Value::Void);
+}
+
+fn fmt(_: &mut ExecutorContext, value: &Value) -> Result<Value, ExecutionError> {
+    return Ok(Value::String(format!("{value:}")));
 }

@@ -1,4 +1,4 @@
-use crate::keywords::KEYWORDS;
+use crate::constants::KEYWORDS;
 
 use super::{LexerContext, TokenValue};
 
@@ -16,6 +16,7 @@ const RIGHT_CURLY: &str = "}";
 const LEFT_ANGLE: &str = "<";
 const RIGHT_ANGLE: &str = ">";
 const QUESTION: &str = "?";
+const DOT: &str = ".";
 const DOLLAR: &str = "$";
 const ESCAPED_DOLLAR: &str = "\\$";
 const BACKTICK: &str = "`";
@@ -37,6 +38,7 @@ pub enum TokenKind {
     LeftAngle,
     RightAngle,
     Question,
+    Dot,
     Semicolon,
     Comma,
     DoubleQuote,
@@ -61,6 +63,7 @@ impl TokenKind {
             TokenKind::LeftAngle => Some(TokenValue::LeftAngle()),
             TokenKind::RightAngle => Some(TokenValue::RightAngle()),
             TokenKind::Question => Some(TokenValue::Question()),
+            TokenKind::Dot => Some(TokenValue::Dot()),
             TokenKind::Semicolon => Some(TokenValue::Semicolon()),
             TokenKind::Comma => Some(TokenValue::Comma()),
             TokenKind::DoubleQuote => Some(TokenValue::DoubleQuote()),
@@ -98,6 +101,7 @@ pub fn try_get_token_kind(
             LEFT_ANGLE => Some(TokenKind::LeftAngle),
             RIGHT_ANGLE => Some(TokenKind::RightAngle),
             QUESTION => Some(TokenKind::Question),
+            DOT => Some(TokenKind::Dot),
             SEMICOLON => Some(TokenKind::Semicolon),
             COMMA => Some(TokenKind::Comma),
             _ => {
@@ -197,8 +201,7 @@ pub fn try_get_token_kind(
 // other syntax characters, or keywords should be allowed (emojis, non-latin scripts, e.c.t...
 // are fine). Currently grapheme clusters won't really work
 fn matches_identifier(value: &str) -> bool {
-    return value.chars().all(|x| x.is_alphanumeric() || x == '_')
-        && !value.chars().next().map_or(false, |x| x.is_digit(10));
+    return !KEYWORDS.contains(&value) && value.chars().all(|x| x.is_alphanumeric() || x == '_');
 }
 
 fn matches_number(value: &str) -> bool {
@@ -219,6 +222,8 @@ pub fn is_newline(value: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use crate::constants::FUNC;
+
     use super::*;
 
     macro_rules! test_case {
@@ -257,7 +262,7 @@ mod tests {
 
     test_case!(
         should_parse_keyword,
-        ("func", vec![LexerContext::Root]),
+        (FUNC, vec![LexerContext::Root]),
         (Some(TokenKind::Keyword))
     );
 
@@ -507,5 +512,11 @@ mod tests {
         should_parse_question,
         ("?", vec![LexerContext::Root]),
         (Some(TokenKind::Question))
+    );
+
+    test_case!(
+        should_parse_dot,
+        ("?", vec![LexerContext::Root]),
+        (Some(TokenKind::Dot))
     );
 }

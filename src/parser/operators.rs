@@ -11,7 +11,7 @@ pub enum Operator {
     Pipe,
 }
 
-pub(super) fn parse_operator<'a, I: Iterator<Item = Token<'a>>>(
+pub(super) fn try_parse_operator<'a, I: Iterator<Item = Token<'a>>>(
     tokens: &mut Backtrackable<I>,
 ) -> Option<Operator> {
     let Some(next) = tokens.next().map(|x| x.value) else {

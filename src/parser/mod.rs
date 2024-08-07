@@ -150,7 +150,7 @@ mod tests {
     use statements::{Assignment, Statement};
 
     use crate::{
-        keywords::{EXEC, VAR},
+        constants::{EXEC, FUNC, IF, TRUE, VAR},
         lexer::{FilePosition, TokenValue},
     };
 
@@ -159,19 +159,19 @@ mod tests {
     #[test]
     fn should_parse_valid_tokens() {
         let tokens = vec![
-            TokenValue::Keyword("func"),
+            TokenValue::Keyword(FUNC),
             TokenValue::Identifier("main"),
             TokenValue::LeftBracket(),
             TokenValue::RightBracket(),
             TokenValue::LeftCurly(),
-            TokenValue::Keyword("var"),
+            TokenValue::Keyword(VAR),
             TokenValue::Identifier("template"),
             TokenValue::Equals(),
             TokenValue::DoubleQuote(),
             TokenValue::StringLiteral("cheese"),
             TokenValue::DoubleQuote(),
             TokenValue::Semicolon(),
-            TokenValue::Keyword("var"),
+            TokenValue::Keyword(VAR),
             TokenValue::Identifier("test_identifier"),
             TokenValue::Equals(),
             TokenValue::DoubleQuote(),
@@ -183,7 +183,7 @@ mod tests {
             TokenValue::StringLiteral("\\\" and rice!"),
             TokenValue::DoubleQuote(),
             TokenValue::Semicolon(),
-            TokenValue::Keyword("if"),
+            TokenValue::Keyword(IF),
             TokenValue::IntegerLiteral("1"),
             TokenValue::Plus(),
             TokenValue::IntegerLiteral("1"),
@@ -198,7 +198,7 @@ mod tests {
             TokenValue::Semicolon(),
             TokenValue::RightCurly(),
             TokenValue::Semicolon(),
-            TokenValue::Keyword("exec"),
+            TokenValue::Keyword(EXEC),
             TokenValue::Backtick(),
             TokenValue::StringLiteral("echo"),
             TokenValue::StringLiteral("something"),
@@ -323,6 +323,27 @@ mod tests {
                     "exit_code".into(),
                 )),
             ))],
+        };
+
+        parser_test(tokens, Ok(expected_tree));
+    }
+
+    #[test]
+    fn should_parse_booleans() {
+        let tokens = vec![
+            TokenValue::Keyword(VAR),
+            TokenValue::Identifier("my_variable"),
+            TokenValue::Equals(),
+            TokenValue::Keyword(TRUE),
+            TokenValue::Semicolon(),
+        ];
+
+        let expected_tree = CodeBlock {
+            functions: vec![],
+            statements: vec![Statement::Declaration(
+                Assignment::Simple("my_variable".into()),
+                Expression::BooleanLiteral(true),
+            )],
         };
 
         parser_test(tokens, Ok(expected_tree));

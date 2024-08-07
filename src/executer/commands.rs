@@ -1,7 +1,7 @@
 use std::{
     fmt::Display,
-    fs::{File, OpenOptions},
-    io::{self, copy, Error, Read},
+    fs::File,
+    io::{self, copy, Read},
     process::{self, Stdio},
 };
 

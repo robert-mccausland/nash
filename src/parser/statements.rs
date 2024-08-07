@@ -1,4 +1,7 @@
-use crate::lexer::{Token, TokenValue};
+use crate::{
+    constants::VAR,
+    lexer::{Token, TokenValue},
+};
 
 use super::{
     expressions::{parse_expression, Expression},
@@ -33,7 +36,7 @@ pub(super) fn parse_statement_content<'a, I: Iterator<Item = Token<'a>>>(
 ) -> Result<Statement, ParserError> {
     let next = tokens.next().map(|x| x.value);
     // Any statement starting with var must be a declaration
-    if let Some(TokenValue::Keyword("var")) = next {
+    if let Some(TokenValue::Keyword(VAR)) = next {
         let assignment = try_parse_assignment(tokens)
             .ok_or::<ParserError>("var must be followed by an assignment".into())?;
         return Ok(Statement::Declaration(

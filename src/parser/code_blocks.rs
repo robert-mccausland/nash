@@ -1,4 +1,7 @@
-use crate::lexer::{Token, TokenValue};
+use crate::{
+    constants::FUNC,
+    lexer::{Token, TokenValue},
+};
 
 use super::{
     functions::{parse_function, Function},
@@ -40,7 +43,7 @@ pub(super) fn parse_code_block<'a, I: Iterator<Item = Token<'a>>>(
             }
         }
 
-        if let Some(TokenValue::Keyword("func")) = token {
+        if let Some(TokenValue::Keyword(FUNC)) = token {
             functions.push(parse_function(tokens)?);
         } else {
             tokens.backtrack();
