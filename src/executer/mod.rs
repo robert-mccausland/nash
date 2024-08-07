@@ -70,8 +70,34 @@ pub enum Value {
     Integer(i32),
     Boolean(bool),
     Command(commands::Command),
-    ExitCode(u8),
     Tuple(Vec<Value>),
+}
+
+impl Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::Void => f.write_str("void")?,
+            Value::String(data) => f.write_str(data)?,
+            Value::Integer(data) => data.fmt(f)?,
+            Value::Boolean(data) => data.fmt(f)?,
+            Value::Command(data) => data.fmt(f)?,
+            Value::Tuple(data) => {
+                f.write_str("(")?;
+                let mut first = true;
+                for element in data {
+                    if !first {
+                        f.write_str(",")?;
+                    } else {
+                        first = false;
+                    }
+                    element.fmt(f)?;
+                }
+                f.write_str(")")?;
+            }
+        };
+
+        return Ok(());
+    }
 }
 
 struct ExecutorContext {
@@ -190,7 +216,17 @@ impl Executor {
                 }
             }
             Statement::Expression(expression) => {
-                self.execute_expression(expression, stack)?;
+                let value = self.execute_expression(expression, stack)?;
+
+                if let Err(err) = writeln!(&mut self.context.stdout, "{:}", value) {
+                    return Err(ExecutionError::new(format!(
+                        "Error writing to stdout: {err}"
+                    )));
+                }
+
+                if let Err(err) = self.context.stdout.flush() {
+                    return Err(ExecutionError::new(format!("Error flushing stdout: {err}")));
+                }
             }
         };
 
@@ -275,10 +311,18 @@ impl Executor {
 
                     match capture_exit_code {
                         Some(CaptureExitCode::Assignment(identifier)) => {
-                            assign_variable(Value::ExitCode(exit_code), &identifier.value, stack)?;
+                            assign_variable(
+                                Value::Integer(exit_code.into()),
+                                &identifier.value,
+                                stack,
+                            )?;
                         }
                         Some(CaptureExitCode::Declaration(identifier)) => {
-                            declare_variable(Value::ExitCode(exit_code), &identifier.value, stack)?;
+                            declare_variable(
+                                Value::Integer(exit_code.into()),
+                                &identifier.value,
+                                stack,
+                            )?;
                         }
                         None => {
                             if exit_code != 0 {

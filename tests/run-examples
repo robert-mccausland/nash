@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -e
+
+find ./examples -name "*.nash" | while read script
+do
+  echo "Running ${script}..."
+  nash "${script}"
+done

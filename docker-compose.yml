@@ -4,4 +4,7 @@ services:
       context: .
       dockerfile: docker/dockerfile
     volumes:
-      - ./examples:/home/nash/scripts
+      - ./:/home/nash/
+    environment:
+      RUST_BACKTRACE: "1"
+    command: tail -f /dev/null

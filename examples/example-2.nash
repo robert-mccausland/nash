@@ -2,7 +2,7 @@
 
 func main() {
   var test = "\"";
-  out(test);
+  test;
 }
 
 main();

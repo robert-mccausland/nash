@@ -12,12 +12,17 @@ pub fn call_builtin(
     match (name, args) {
         ("parse_int", [Value::String(arg1)]) => Ok(Value::Integer(parse_int(arg1)?)),
         ("in", []) => r#in(context),
-        ("out", [Value::String(arg1)]) => out(context, arg1),
-        ("out", [Value::ExitCode(arg1)]) => out(context, &format!("{:}", arg1)),
         ("err", [Value::String(arg1)]) => err(context, arg1),
-        _ => Err(ExecutionError::new(
-            "No function found with given name and arguments".to_owned(),
-        )),
+        (name, args) => {
+            let args = args
+                .iter()
+                .map(|arg| format!("{arg}"))
+                .reduce(|value, acc| format!("{acc}, {value}"))
+                .unwrap_or(String::new());
+            return Err(ExecutionError::new(format!(
+                "No function found with name: '{name}' and arguments: {args}"
+            )));
+        }
     }
 }
 

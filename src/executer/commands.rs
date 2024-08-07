@@ -1,6 +1,7 @@
 use std::{
-    fs::File,
-    io::{self, copy, Read},
+    fmt::Display,
+    fs::{File, OpenOptions},
+    io::{self, copy, Error, Read},
     process::{self, Stdio},
 };
 
@@ -85,6 +86,32 @@ impl From<Option<i32>> for StatusCode {
             None => Self::Terminated,
             Some(x) => x.into(),
         }
+    }
+}
+
+impl Display for Command {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.command)?;
+        for arg in &self.arguments {
+            f.write_str(" ")?;
+            f.write_str("\"")?;
+            f.write_str(&arg)?;
+            f.write_str("\"")?;
+        }
+
+        if let Some(output) = &self.output {
+            f.write_str(" => ")?;
+            match &output.destination {
+                OutputDestination::File(file) => {
+                    f.write_str("\"")?;
+                    f.write_str(&file)?;
+                    f.write_str("\"")?;
+                }
+                OutputDestination::Command(command) => command.fmt(f)?,
+            }
+        }
+
+        Ok(())
     }
 }
 

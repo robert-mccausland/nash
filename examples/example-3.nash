@@ -1,4 +1,5 @@
 #!/bin/nash
 
 var output_file = "downloaded_file.txt";
-var (_, err) = exec `curl https://example.com/file.txt` => output_file;
+var (_, err) = exec `curl https://example.com/file.txt`;
+err;
