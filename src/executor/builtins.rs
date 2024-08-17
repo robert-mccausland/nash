@@ -1,6 +1,6 @@
-use crate::executer::{ExecutionError, Value};
+use crate::components::errors::ExecutionError;
 
-use super::ExecutorContext;
+use super::{ExecutorContext, Value};
 
 const READ_BUF_SIZE: usize = 256;
 
@@ -21,16 +21,16 @@ pub fn call_builtin(
                 .map(|arg| format!("{arg}"))
                 .reduce(|value, acc| format!("{acc}, {value}"))
                 .unwrap_or(String::new());
-            return Err(ExecutionError::new(format!(
-                "No function found with name: '{name}' and arguments: {args}"
-            )));
+            return Err(
+                format!("No function found with name: '{name}' and arguments: {args}").into(),
+            );
         }
     }
 }
 
 fn parse_int(value: &str) -> Result<i32, ExecutionError> {
     i32::from_str_radix(value, 10)
-        .map_err(|_| ExecutionError::new(format!("Could not parse string {:} into integer", value)))
+        .map_err(|_| format!("Could not parse string {:} into integer", value).into())
 }
 
 fn r#in(context: &mut ExecutorContext) -> Result<Value, ExecutionError> {
@@ -39,19 +39,13 @@ fn r#in(context: &mut ExecutorContext) -> Result<Value, ExecutionError> {
     loop {
         let size = match context.stdin.read_until(b'\n', &mut buf) {
             Ok(n) => n,
-            Err(err) => {
-                return Err(ExecutionError::new(format!(
-                    "Error reading from stdin: {err}"
-                )))
-            }
+            Err(err) => return Err(format!("Error reading from stdin: {err}").into()),
         };
 
         let buffer = match std::str::from_utf8(&buf[0..size]) {
             Ok(result) => result,
             Err(err) => {
-                return Err(ExecutionError::new(format!(
-                    "Bytes read from stdin was not valid utf8: {err}"
-                )))
+                return Err(format!("Bytes read from stdin was not valid utf8: {err}").into())
             }
         };
 
@@ -65,15 +59,7 @@ fn r#in(context: &mut ExecutorContext) -> Result<Value, ExecutionError> {
 
 fn out(context: &mut ExecutorContext, value: &str) -> Result<Value, ExecutionError> {
     if let Err(err) = writeln!(&mut context.stdout, "{:}", value) {
-        return Err(ExecutionError::new(format!(
-            "Error writing to stdout: {err}"
-        )));
-    }
-
-    if let Err(err) = context.stdout.flush() {
-        return Err(ExecutionError::new(format!(
-            "Error writing to stdout: {err}"
-        )));
+        return Err(format!("Error writing to stdout: {err}").into());
     }
 
     return Ok(Value::Void);
@@ -81,15 +67,7 @@ fn out(context: &mut ExecutorContext, value: &str) -> Result<Value, ExecutionErr
 
 fn err(context: &mut ExecutorContext, value: &str) -> Result<Value, ExecutionError> {
     if let Err(err) = writeln!(&mut context.stderr, "{:}", value) {
-        return Err(ExecutionError::new(format!(
-            "Error writing to stderr: {err}"
-        )));
-    }
-
-    if let Err(err) = context.stderr.flush() {
-        return Err(ExecutionError::new(format!(
-            "Error writing to stderr: {err}"
-        )));
+        return Err(format!("Error writing to stderr: {err}").into());
     }
 
     return Ok(Value::Void);

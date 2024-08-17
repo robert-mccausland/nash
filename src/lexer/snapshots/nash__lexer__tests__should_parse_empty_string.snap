@@ -1,0 +1,28 @@
+---
+source: src/lexer/mod.rs
+expression: tokens
+---
+- value:
+    Keyword: var
+  start: 0
+  end: 3
+- value:
+    Identifier: test
+  start: 4
+  end: 8
+- value:
+    Equals: []
+  start: 9
+  end: 10
+- value:
+    DoubleQuote: []
+  start: 11
+  end: 12
+- value:
+    DoubleQuote: []
+  start: 12
+  end: 13
+- value:
+    Semicolon: []
+  start: 13
+  end: 14

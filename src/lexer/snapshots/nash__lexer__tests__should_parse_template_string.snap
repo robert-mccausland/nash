@@ -1,0 +1,52 @@
+---
+source: src/lexer/mod.rs
+expression: tokens
+---
+- value:
+    Keyword: var
+  start: 0
+  end: 3
+- value:
+    Identifier: test
+  start: 4
+  end: 8
+- value:
+    Equals: []
+  start: 9
+  end: 10
+- value:
+    DoubleQuote: []
+  start: 11
+  end: 12
+- value:
+    StringLiteral: "hello "
+  start: 12
+  end: 18
+- value:
+    Dollar: []
+  start: 18
+  end: 19
+- value:
+    LeftCurly: []
+  start: 19
+  end: 20
+- value:
+    Identifier: value
+  start: 20
+  end: 25
+- value:
+    RightCurly: []
+  start: 25
+  end: 26
+- value:
+    StringLiteral: "!"
+  start: 26
+  end: 27
+- value:
+    DoubleQuote: []
+  start: 27
+  end: 28
+- value:
+    Semicolon: []
+  start: 28
+  end: 29

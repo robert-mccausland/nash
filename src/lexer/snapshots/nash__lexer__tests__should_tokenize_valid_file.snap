@@ -1,0 +1,140 @@
+---
+source: src/lexer/mod.rs
+expression: tokens
+---
+- value:
+    Keyword: func
+  start: 21
+  end: 25
+- value:
+    Identifier: main
+  start: 26
+  end: 30
+- value:
+    LeftBracket: []
+  start: 30
+  end: 31
+- value:
+    RightBracket: []
+  start: 31
+  end: 32
+- value:
+    LeftCurly: []
+  start: 33
+  end: 34
+- value:
+    Keyword: var
+  start: 37
+  end: 40
+- value:
+    Identifier: test_identifier
+  start: 41
+  end: 56
+- value:
+    Equals: []
+  start: 57
+  end: 58
+- value:
+    DoubleQuote: []
+  start: 59
+  end: 60
+- value:
+    StringLiteral: "Blue \\\"cheese\\\" and rice!"
+  start: 60
+  end: 85
+- value:
+    DoubleQuote: []
+  start: 85
+  end: 86
+- value:
+    Semicolon: []
+  start: 86
+  end: 87
+- value:
+    Keyword: if
+  start: 90
+  end: 92
+- value:
+    IntegerLiteral: "1"
+  start: 93
+  end: 94
+- value:
+    Plus: []
+  start: 95
+  end: 96
+- value:
+    IntegerLiteral: "1"
+  start: 97
+  end: 98
+- value:
+    Equals: []
+  start: 99
+  end: 100
+- value:
+    Equals: []
+  start: 100
+  end: 101
+- value:
+    IntegerLiteral: "2"
+  start: 102
+  end: 103
+- value:
+    LeftCurly: []
+  start: 104
+  end: 105
+- value:
+    Identifier: out
+  start: 110
+  end: 113
+- value:
+    LeftBracket: []
+  start: 113
+  end: 114
+- value:
+    Identifier: test_identifier
+  start: 114
+  end: 129
+- value:
+    RightBracket: []
+  start: 129
+  end: 130
+- value:
+    Semicolon: []
+  start: 130
+  end: 131
+- value:
+    RightCurly: []
+  start: 134
+  end: 135
+- value:
+    Semicolon: []
+  start: 135
+  end: 136
+- value:
+    Keyword: exec
+  start: 140
+  end: 144
+- value:
+    Backtick: []
+  start: 145
+  end: 146
+- value:
+    StringLiteral: echo
+  start: 146
+  end: 150
+- value:
+    StringLiteral: something
+  start: 151
+  end: 160
+- value:
+    Backtick: []
+  start: 160
+  end: 161
+- value:
+    Semicolon: []
+  start: 161
+  end: 162
+- value:
+    RightCurly: []
+  start: 163
+  end: 164

@@ -128,6 +128,12 @@ pub trait CommandExecutor {
 
 pub struct SystemCommandExecutor;
 
+impl SystemCommandExecutor {
+    pub fn new() -> Self {
+        SystemCommandExecutor {}
+    }
+}
+
 impl CommandExecutor for SystemCommandExecutor {
     fn run(&self, command: &Command) -> io::Result<CommandResult> {
         let mut stdout = None;

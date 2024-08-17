@@ -213,7 +213,7 @@ fn matches_number(value: &str) -> bool {
 fn is_whitespace(value: &str) -> bool {
     // Checking chars individually is fine here, as any valid unicode whitespace should
     // really be a single character, and not a grapheme cluster
-    return value.chars().all(|x| x.is_whitespace());
+    return value.chars().all(|x| x.is_whitespace()) || is_newline(value);
 }
 
 pub fn is_newline(value: &str) -> bool {
@@ -516,7 +516,7 @@ mod tests {
 
     test_case!(
         should_parse_dot,
-        ("?", vec![LexerContext::Root]),
+        (".", vec![LexerContext::Root]),
         (Some(TokenKind::Dot))
     );
 }
