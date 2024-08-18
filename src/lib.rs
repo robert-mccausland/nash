@@ -1,7 +1,9 @@
 use std::fmt::{Error, Write};
 use std::io::Read;
 
-use errors::{NashError, ParserError};
+pub use errors::{ExecutionError, LexerError, NashError, ParserError};
+pub use executor::commands::{Command, CommandExecutor, CommandResult, SystemCommandExecutor};
+pub use executor::Executor;
 
 mod components;
 mod constants;
@@ -10,9 +12,6 @@ mod executor;
 mod lexer;
 mod parser;
 mod utils;
-
-pub use executor::commands::{Command, CommandExecutor, CommandResult, SystemCommandExecutor};
-pub use executor::Executor;
 
 pub fn execute<R: Read>(script: &mut R, executor: &mut Executor) -> Result<(), NashError> {
     let mut content = String::new();

@@ -1,5 +1,7 @@
 use std::{error::Error, fmt::Display};
 
+use serde::Serialize;
+
 use crate::lexer::Token;
 
 macro_rules! impl_error {
@@ -34,7 +36,7 @@ macro_rules! impl_error {
 
 macro_rules! nash_error {
     ($($error:ident,)*) => {
-        #[derive(Debug, PartialEq, Eq)]
+        #[derive(Debug, PartialEq, Eq, Serialize)]
         pub enum NashError {
             $(
                 $error($error),
@@ -73,7 +75,7 @@ macro_rules! nash_error {
 
 nash_error![LexerError, ParserError, ExecutionError,];
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct LexerError {
     pub message: String,
     pub position: Option<usize>,
@@ -96,7 +98,7 @@ impl Display for LexerError {
 
 impl_error!(LexerError);
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct ParserError {
     pub message: String,
     pub token: String,
@@ -129,7 +131,7 @@ impl Display for ParserError {
 
 impl_error!(ParserError);
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct ExecutionError {
     message: String,
 }

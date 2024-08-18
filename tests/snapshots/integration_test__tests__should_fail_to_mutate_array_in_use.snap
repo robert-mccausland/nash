@@ -1,0 +1,6 @@
+---
+source: tests/integration_test.rs
+expression: "nash::execute(&mut test_code.as_bytes(), &mut executor).unwrap_err()"
+---
+ExecutionError:
+  message: Cannot mutate array that is already being used

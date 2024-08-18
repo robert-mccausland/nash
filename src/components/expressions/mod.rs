@@ -7,6 +7,7 @@ use crate::{
 mod branch;
 mod collections;
 mod execute;
+mod loops;
 mod variable;
 
 use super::{
@@ -19,6 +20,7 @@ use super::{
 use branch::BranchExpression;
 use collections::{ArrayExpression, TupleExpression};
 use execute::ExecuteExpression;
+use loops::ForLoopExpression;
 use serde::Serialize;
 use variable::VariableExpression;
 
@@ -171,4 +173,5 @@ expression_content!([
     VariableExpression,
     BranchExpression,
     ExecuteExpression,
+    ForLoopExpression,
 ]);

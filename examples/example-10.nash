@@ -1,0 +1,6 @@
+#!/bin/nash
+
+# Array example
+for value in ["first", "second", "third"] {
+  out(value);
+};
