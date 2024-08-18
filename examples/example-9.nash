@@ -1,0 +1,9 @@
+#!/bin/nash
+
+# Array example
+var array = ["first", "second", "third"];
+out(pop(array));
+out(fmt(array));
+
+push(array, "last");
+out(fmt(array));

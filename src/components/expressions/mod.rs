@@ -5,8 +5,8 @@ use crate::{
 };
 
 mod branch;
+mod collections;
 mod execute;
-mod tuple;
 mod variable;
 
 use super::{
@@ -17,9 +17,9 @@ use super::{
 };
 
 use branch::BranchExpression;
+use collections::{ArrayExpression, TupleExpression};
 use execute::ExecuteExpression;
 use serde::Serialize;
-use tuple::TupleExpression;
 use variable::VariableExpression;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -166,6 +166,7 @@ expression_content!([
     BooleanLiteral,
     IntegerLiteral,
     CommandLiteral,
+    ArrayExpression,
     TupleExpression,
     VariableExpression,
     BranchExpression,

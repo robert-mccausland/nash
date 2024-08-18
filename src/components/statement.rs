@@ -25,9 +25,10 @@ impl Statement {
         tokens: &mut Backtrackable<I>,
     ) -> Result<Statement, ParserError> {
         let statement = Self::parse_content(tokens)?;
-        let Some(TokenValue::Semicolon()) = tokens.next_value() else {
+        let Some(TokenValue::Semicolon()) = tokens.peek_value() else {
             return Err("statement must end with ;".into());
         };
+        tokens.next();
         return Ok(statement);
     }
 

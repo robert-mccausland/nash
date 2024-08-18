@@ -99,6 +99,7 @@ impl_error!(LexerError);
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParserError {
     pub message: String,
+    pub token: String,
     pub start: Option<usize>,
     pub end: Option<usize>,
 }
@@ -107,12 +108,14 @@ impl ParserError {
     pub fn new(message: String) -> Self {
         Self {
             message,
+            token: String::new(),
             start: None,
             end: None,
         }
     }
 
     pub fn set_position<'a>(&mut self, token: &'a Token<'a>) {
+        self.token = format!("{:?}", token.value);
         self.start = Some(token.start);
         self.end = Some(token.end);
     }

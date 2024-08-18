@@ -1,3 +1,4 @@
+use std::fmt::{Error, Write};
 use std::io::Read;
 
 use errors::{NashError, ParserError};
@@ -24,7 +25,12 @@ pub fn execute<R: Read>(script: &mut R, executor: &mut Executor) -> Result<(), N
     let root = match parser::parse(tokens) {
         Ok(root) => root,
         Err(err) => {
-            println!("{}", format_error(&err, &content));
+            println!("Error parsing script:");
+            println!(
+                "{}",
+                format_error(&err, &content)
+                    .unwrap_or("Warning: Unable to write error information".to_owned())
+            );
             return Err(err.into());
         }
     };
@@ -34,10 +40,17 @@ pub fn execute<R: Read>(script: &mut R, executor: &mut Executor) -> Result<(), N
     return Ok(());
 }
 
-fn format_error(error: &ParserError, source_file: &str) -> String {
+fn format_error(error: &ParserError, source_file: &str) -> Result<String, Error> {
     let mut result = String::new();
+
     if let Some(start) = &error.start {
         if let Some(end) = &error.end {
+            writeln!(
+                result,
+                "Unexpected token: {:} at index {:}",
+                error.token, start
+            )?;
+
             let mut line = String::new();
             let mut underline_start = 0;
 
@@ -47,17 +60,20 @@ fn format_error(error: &ParserError, source_file: &str) -> String {
                         break;
                     }
                     line = String::new();
+                    underline_start = start - index - 1;
                     continue;
                 }
 
                 line += &String::from(char);
-                underline_start = start - index;
             }
 
             let underline = " ".repeat(underline_start) + &"^".repeat(end - start);
-            result += &line;
-            result += &underline;
+            writeln!(result, "{line}")?;
+            writeln!(result, "{underline}")?;
         }
     }
-    return result;
+
+    writeln!(result, "{}", error.message)?;
+
+    return Ok(result);
 }

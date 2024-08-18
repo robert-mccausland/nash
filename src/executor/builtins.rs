@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use crate::errors::ExecutionError;
 
 use super::{ExecutorContext, Value};
@@ -15,6 +17,8 @@ pub fn call_builtin(
         ("err", [Value::String(arg1)]) => err(context, arg1),
         ("out", [Value::String(arg1)]) => out(context, arg1),
         ("fmt", [arg1]) => fmt(context, arg1),
+        ("push", [Value::Array(arg1), arg2]) => push(context, arg1.as_ref(), arg2),
+        ("pop", [Value::Array(arg1)]) => pop(context, arg1.as_ref()),
         (name, args) => {
             let args = args
                 .iter()
@@ -75,4 +79,31 @@ fn err(context: &mut ExecutorContext, value: &str) -> Result<Value, ExecutionErr
 
 fn fmt(_: &mut ExecutorContext, value: &Value) -> Result<Value, ExecutionError> {
     return Ok(Value::String(format!("{value:}")));
+}
+
+fn push(
+    _context: &mut ExecutorContext,
+    array: &RefCell<Vec<Value>>,
+    value: &Value,
+) -> Result<Value, ExecutionError> {
+    array
+        .try_borrow_mut()
+        .map_err::<ExecutionError, _>(|_| {
+            format!("Cannot mutate array that is already being used").into()
+        })?
+        .push(value.clone());
+    Ok(Value::Void)
+}
+
+fn pop(
+    _context: &mut ExecutorContext,
+    array: &RefCell<Vec<Value>>,
+) -> Result<Value, ExecutionError> {
+    Ok(array
+        .try_borrow_mut()
+        .map_err::<ExecutionError, _>(|_| {
+            format!("Cannot mutate array that is already being used").into()
+        })?
+        .pop()
+        .ok_or::<ExecutionError>("Unable to pop array with no elements".into())?)
 }

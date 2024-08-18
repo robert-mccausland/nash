@@ -15,6 +15,8 @@ const LEFT_CURLY: &str = "{";
 const RIGHT_CURLY: &str = "}";
 const LEFT_ANGLE: &str = "<";
 const RIGHT_ANGLE: &str = ">";
+const LEFT_SQUARE: &str = "[";
+const RIGHT_SQUARE: &str = "]";
 const QUESTION: &str = "?";
 const DOT: &str = ".";
 const DOLLAR: &str = "$";
@@ -37,6 +39,8 @@ pub enum TokenKind {
     RightCurly,
     LeftAngle,
     RightAngle,
+    LeftSquare,
+    RightSquare,
     Question,
     Dot,
     Semicolon,
@@ -62,6 +66,8 @@ impl TokenKind {
             TokenKind::RightCurly => Some(TokenValue::RightCurly()),
             TokenKind::LeftAngle => Some(TokenValue::LeftAngle()),
             TokenKind::RightAngle => Some(TokenValue::RightAngle()),
+            TokenKind::LeftSquare => Some(TokenValue::LeftSquare()),
+            TokenKind::RightSquare => Some(TokenValue::RightSquare()),
             TokenKind::Question => Some(TokenValue::Question()),
             TokenKind::Dot => Some(TokenValue::Dot()),
             TokenKind::Semicolon => Some(TokenValue::Semicolon()),
@@ -100,6 +106,8 @@ pub fn try_get_token_kind(
             RIGHT_CURLY => Some(TokenKind::RightCurly),
             LEFT_ANGLE => Some(TokenKind::LeftAngle),
             RIGHT_ANGLE => Some(TokenKind::RightAngle),
+            LEFT_SQUARE => Some(TokenKind::LeftSquare),
+            RIGHT_SQUARE => Some(TokenKind::RightSquare),
             QUESTION => Some(TokenKind::Question),
             DOT => Some(TokenKind::Dot),
             SEMICOLON => Some(TokenKind::Semicolon),
@@ -518,5 +526,17 @@ mod tests {
         should_parse_dot,
         (".", vec![LexerContext::Root]),
         (Some(TokenKind::Dot))
+    );
+
+    test_case!(
+        should_parse_left_square,
+        ("[", vec![LexerContext::Root]),
+        (Some(TokenKind::LeftSquare))
+    );
+
+    test_case!(
+        should_parse_right_square,
+        ("]", vec![LexerContext::Root]),
+        (Some(TokenKind::RightSquare))
     );
 }

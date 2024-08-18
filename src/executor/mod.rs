@@ -1,7 +1,9 @@
 use std::{
+    cell::RefCell,
     collections::HashMap,
     fmt::Display,
     io::{stderr, stdin, stdout, BufRead, BufReader, Write},
+    rc::Rc,
 };
 
 use commands::CommandExecutor;
@@ -10,6 +12,7 @@ use crate::{
     components::{function::Function, root::Root},
     constants::UNDERSCORE,
     errors::ExecutionError,
+    utils::formatting::fmt_collection,
     SystemCommandExecutor,
 };
 
@@ -31,6 +34,7 @@ pub enum Value {
     Integer(i32),
     Boolean(bool),
     Command(commands::Command),
+    Array(Rc<RefCell<Vec<Value>>>),
     Tuple(Vec<Value>),
 }
 
@@ -40,30 +44,20 @@ impl Display for Value {
             Value::Void => f.write_str("void")?,
             Value::String(data) => {
                 f.write_str("\"")?;
-                f.write_str(data)?;
+                f.write_str(&data.replace("\"", "\\\""))?;
                 f.write_str("\"")?;
             }
             Value::Integer(data) => data.fmt(f)?,
             Value::Boolean(data) => data.fmt(f)?,
             Value::Command(data) => data.fmt(f)?,
-            Value::Tuple(data) => {
-                f.write_str("(")?;
-                let mut first = true;
-                for element in data {
-                    if !first {
-                        f.write_str(",")?;
-                    } else {
-                        first = false;
-                    }
-                    element.fmt(f)?;
-                }
-                f.write_str(")")?;
-            }
+            Value::Array(data) => fmt_collection("[", ",", "]", data.borrow().iter(), f)?,
+            Value::Tuple(data) => fmt_collection("(", ",", ")", data.iter(), f)?,
         };
 
         return Ok(());
     }
 }
+
 pub struct Executor {
     context: ExecutorContext,
 }

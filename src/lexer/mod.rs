@@ -34,6 +34,8 @@ pub enum TokenValue<'a> {
     RightCurly(),
     LeftAngle(),
     RightAngle(),
+    LeftSquare(),
+    RightSquare(),
     Question(),
     Dot(),
     Semicolon(),
