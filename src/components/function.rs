@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 use crate::{
     constants::FUNC,
     lexer::{Token, TokenValue},
@@ -6,7 +8,7 @@ use crate::{
 
 use super::{block::Block, errors::ParserError, Identifier, Tokens};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Function {
     pub name: Identifier,
     pub arguments: Vec<Identifier>,

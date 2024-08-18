@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 #[derive(Debug)]
-pub(crate) struct Backtrackable<I: Iterator>
+pub struct Backtrackable<I: Iterator>
 where
     I::Item: Debug + Copy,
 {
@@ -11,7 +11,7 @@ where
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct Checkpoint {
+pub struct Checkpoint {
     history_position: usize,
 }
 

@@ -1,4 +1,4 @@
 #!/bin/nash
 
 var result = exec `echo something`;
-result.0;
+out(result.0);

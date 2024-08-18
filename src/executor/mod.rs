@@ -1,14 +1,16 @@
 use std::{
     collections::HashMap,
     fmt::Display,
-    io::{BufRead, Write},
+    io::{stderr, stdin, stdout, BufRead, BufReader, Write},
 };
 
 use commands::CommandExecutor;
 
 use crate::{
-    components::{errors::ExecutionError, function::Function, root::Root},
+    components::{function::Function, root::Root},
     constants::UNDERSCORE,
+    errors::ExecutionError,
+    SystemCommandExecutor,
 };
 
 pub mod builtins;
@@ -36,7 +38,11 @@ impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Value::Void => f.write_str("void")?,
-            Value::String(data) => f.write_str(data)?,
+            Value::String(data) => {
+                f.write_str("\"")?;
+                f.write_str(data)?;
+                f.write_str("\"")?;
+            }
             Value::Integer(data) => data.fmt(f)?,
             Value::Boolean(data) => data.fmt(f)?,
             Value::Command(data) => data.fmt(f)?,
@@ -84,7 +90,16 @@ impl Executor {
         }
     }
 
-    pub fn execute(&mut self, root: &Root) -> Result<(), ExecutionError> {
+    pub fn default() -> Self {
+        Self::new(
+            SystemCommandExecutor::new(),
+            BufReader::new(stdin()),
+            stdout(),
+            stderr(),
+        )
+    }
+
+    pub(crate) fn execute(&mut self, root: &Root) -> Result<(), ExecutionError> {
         let mut stack = ExecutorStack {
             functions: HashMap::new(),
             variables: HashMap::new(),

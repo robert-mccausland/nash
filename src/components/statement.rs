@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 use crate::{
     constants::VAR,
     executor::{ExecutorContext, ExecutorStack, Value},
@@ -7,11 +9,11 @@ use crate::{
 
 use super::{
     errors::{ExecutionError, ParserError},
-    expression::Expression,
+    expressions::Expression,
     Identifier, Tokens,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum Statement {
     Declaration(Assignment, Expression),
     Assignment(Assignment, Expression),
@@ -36,7 +38,7 @@ impl Statement {
     ) -> Result<(), ExecutionError> {
         match self {
             Statement::Assignment(assignment, expression) => {
-                let result = expression.execute(stack, context)?;
+                let result = expression.evaluate(stack, context)?;
                 match assignment {
                     Assignment::Simple(identifier) => {
                         stack.assign_variable(result, &identifier.value)?;
@@ -59,7 +61,7 @@ impl Statement {
                 }
             }
             Statement::Declaration(assignment, expression) => {
-                let result = expression.execute(stack, context)?;
+                let result = expression.evaluate(stack, context)?;
                 match assignment {
                     Assignment::Simple(identifier) => {
                         stack.declare_variable(result, &identifier.value)?;
@@ -82,14 +84,7 @@ impl Statement {
                 }
             }
             Statement::Expression(expression) => {
-                let value = expression.execute(stack, context)?;
-
-                if let Value::Void = value {
-                } else {
-                    if let Err(err) = writeln!(&mut context.stdout, "{:}", value) {
-                        return Err(format!("Error writing to stdout: {err}").into());
-                    }
-                }
+                expression.evaluate(stack, context)?;
             }
         };
 
@@ -124,7 +119,7 @@ impl Statement {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum Assignment {
     Simple(Identifier),
     Tuple(Vec<Identifier>),

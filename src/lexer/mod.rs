@@ -1,11 +1,9 @@
-use std::{
-    error::Error,
-    fmt::{Debug, Display},
-    iter::Peekable,
-};
+use std::iter::Peekable;
 
 use serde::Serialize;
 use unicode_segmentation::{GraphemeIndices, UnicodeSegmentation};
+
+use crate::errors::LexerError;
 
 mod token_kinds;
 
@@ -52,50 +50,6 @@ enum LexerContext {
     String,
     Command,
     TemplateVariable,
-}
-
-#[derive(Debug)]
-pub struct LexerError {
-    pub message: String,
-    pub position: Option<usize>,
-}
-
-impl LexerError {
-    pub fn new(message: String) -> Self {
-        Self {
-            message,
-            position: None,
-        }
-    }
-}
-
-impl From<&str> for LexerError {
-    fn from(value: &str) -> Self {
-        Self::new(value.to_owned())
-    }
-}
-
-impl Display for LexerError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)?;
-        self.position.fmt(f)?;
-
-        Ok(())
-    }
-}
-
-impl Error for LexerError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        None
-    }
-
-    fn description(&self) -> &str {
-        "description() is deprecated; use Display"
-    }
-
-    fn cause(&self) -> Option<&dyn Error> {
-        self.source()
-    }
 }
 
 pub fn lex<'a>(file: &'a str) -> Tokens<'a> {

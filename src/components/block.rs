@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 use crate::{
     executor::{ExecutorContext, ExecutorStack},
     lexer::{Token, TokenValue},
@@ -10,7 +12,7 @@ use super::{
     Tokens,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Block {
     pub statements: Vec<Statement>,
 }

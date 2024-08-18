@@ -1,7 +1,7 @@
 #!/bin/nash
 
 var tuple = ("hello", "world", 123, false);
-tuple.0;
-tuple.1;
-tuple.2;
-tuple.3;
+out(tuple.0);
+out(fmt(tuple.1));
+out(fmt(tuple.2));
+out(fmt(tuple.3));

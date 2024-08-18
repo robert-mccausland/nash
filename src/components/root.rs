@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 use crate::{
     executor::{ExecutorContext, ExecutorStack},
     lexer::Token,
@@ -11,14 +13,14 @@ use super::{
     Tokens,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Root {
     pub statements: Vec<Statement>,
     pub functions: Vec<Function>,
 }
 
 impl Root {
-    pub(crate) fn parse<'a, I: Iterator<Item = &'a Token<'a>>>(
+    pub fn parse<'a, I: Iterator<Item = &'a Token<'a>>>(
         tokens: &mut Backtrackable<I>,
     ) -> Result<Self, ParserError> {
         let mut statements = Vec::new();

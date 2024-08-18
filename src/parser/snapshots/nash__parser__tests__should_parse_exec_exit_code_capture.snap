@@ -1,0 +1,25 @@
+---
+source: src/parser/mod.rs
+expression: parse(tokens.iter()).unwrap()
+---
+statements:
+  - Expression:
+      operations: []
+      first:
+        content:
+          ExecuteExpression:
+            inner:
+              operations: []
+              first:
+                content:
+                  CommandLiteral:
+                    command:
+                      parts: []
+                      end: test
+                    arguments: []
+                accessor: ~
+            capture_exit_code:
+              Declaration:
+                value: exit_code
+        accessor: ~
+functions: []

@@ -5,8 +5,8 @@
 var template = "cheese";
 var test_identifier = "Blue ${template} and rice!";
 if 1 + 1 == 2 {
-  test_identifier;
+  out(test_identifier);
 };
 
 var (something) = exec `echo something`;
-something;
+out(something);

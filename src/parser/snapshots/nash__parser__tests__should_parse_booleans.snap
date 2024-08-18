@@ -1,0 +1,15 @@
+---
+source: src/parser/mod.rs
+expression: parse(tokens.iter()).unwrap()
+---
+statements:
+  - Declaration:
+      - Simple:
+          value: my_variable
+      - operations: []
+        first:
+          content:
+            BooleanLiteral:
+              value: true
+          accessor: ~
+functions: []

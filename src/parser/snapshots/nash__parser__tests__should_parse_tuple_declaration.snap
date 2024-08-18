@@ -1,0 +1,29 @@
+---
+source: src/parser/mod.rs
+expression: parse(tokens.iter()).unwrap()
+---
+statements:
+  - Declaration:
+      - Tuple:
+          - value: one
+          - value: two
+      - operations: []
+        first:
+          content:
+            TupleExpression:
+              values:
+                - operations: []
+                  first:
+                    content:
+                      StringLiteral:
+                        parts: []
+                        end: hi
+                    accessor: ~
+                - operations: []
+                  first:
+                    content:
+                      IntegerLiteral:
+                        value: 123
+                    accessor: ~
+          accessor: ~
+functions: []

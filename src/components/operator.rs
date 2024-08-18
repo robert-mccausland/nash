@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 use crate::{
     executor::{commands::OutputSource, Value},
     lexer::{Token, TokenValue},
@@ -5,7 +7,7 @@ use crate::{
 
 use super::{errors::ExecutionError, Backtrackable, Tokens};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum Operator {
     LessThan,
     GreaterThan,

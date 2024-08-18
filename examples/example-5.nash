@@ -1,5 +1,5 @@
 #!/bin/nash
 
-`test something`;
-`test something` => `test something else`;
-`test something` => `test something else` => "file";
+out(fmt(`test something`));
+out(fmt(`test something` => `test something else`));
+out(fmt(`test something` => `test something else` => "file"));

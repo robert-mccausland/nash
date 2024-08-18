@@ -137,7 +137,7 @@ impl SystemCommandExecutor {
 impl CommandExecutor for SystemCommandExecutor {
     fn run(&self, command: &Command) -> io::Result<CommandResult> {
         let mut stdout = None;
-        let mut stderr = None;
+        let mut _stderr = None;
         let mut input_source = None;
         let mut command = command;
         let mut processes = Vec::new();
@@ -160,7 +160,7 @@ impl CommandExecutor for SystemCommandExecutor {
 
             let mut process = process.spawn()?;
             stdout = process.stdout.take();
-            stderr = process.stderr.take();
+            _stderr = process.stderr.take();
             processes.push(process);
 
             let Some(ref output) = command.output else {
@@ -186,7 +186,7 @@ impl CommandExecutor for SystemCommandExecutor {
         }
 
         let mut stderr_data = String::new();
-        if let Some(mut stderr) = stderr {
+        if let Some(mut stderr) = _stderr {
             stderr.read_to_string(&mut stderr_data)?;
             stderr_data.truncate(stderr_data.trim_end().len());
         }

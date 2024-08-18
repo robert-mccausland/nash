@@ -1,13 +1,14 @@
-use errors::ParserError;
+use serde::Serialize;
 
 use crate::{
+    errors::{self, ExecutionError, ParserError},
+    executor::{ExecutorContext, ExecutorStack, Value},
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
 };
 
 pub mod block;
-pub mod errors;
-pub mod expression;
+pub mod expressions;
 pub mod function;
 pub mod literals;
 pub mod operator;
@@ -44,7 +45,7 @@ impl<'a, I: Iterator<Item = &'a Token<'a>>> Tokens<'a> for Backtrackable<I> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Identifier {
     pub value: String,
 }
@@ -55,4 +56,19 @@ impl From<&str> for Identifier {
             value: value.to_owned(),
         }
     }
+}
+
+trait Evaluatable
+where
+    Self: Sized,
+{
+    fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
+        tokens: &mut Backtrackable<I>,
+    ) -> Result<Option<Self>, ParserError>;
+
+    fn evaluate(
+        &self,
+        stack: &mut ExecutorStack,
+        context: &mut ExecutorContext,
+    ) -> Result<Value, ExecutionError>;
 }

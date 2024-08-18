@@ -1,4 +1,4 @@
-use crate::components::errors::ExecutionError;
+use crate::errors::ExecutionError;
 
 use super::{ExecutorContext, Value};
 
