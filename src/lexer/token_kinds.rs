@@ -209,7 +209,7 @@ pub fn try_get_token_kind(
 // other syntax characters, or keywords should be allowed (emojis, non-latin scripts, e.c.t...
 // are fine). Currently grapheme clusters won't really work
 fn matches_identifier(value: &str) -> bool {
-    return !KEYWORDS.contains(&value) && value.chars().all(|x| x.is_alphanumeric() || x == '_');
+    return value.chars().all(|x| x.is_alphanumeric() || x == '_');
 }
 
 fn matches_number(value: &str) -> bool {

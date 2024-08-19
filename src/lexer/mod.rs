@@ -173,7 +173,6 @@ func main() {
     }
 
     #[test]
-
     fn should_parse_empty_string() {
         let test_file = r#"var test = "";"#;
         let tokens = lex(test_file).collect::<Result<Vec<_>, _>>().unwrap();
@@ -181,9 +180,15 @@ func main() {
     }
 
     #[test]
-
     fn should_parse_template_string() {
         let test_file = r#"var test = "hello ${value}!";"#;
+        let tokens = lex(test_file).collect::<Result<Vec<_>, _>>().unwrap();
+        assert_yaml_snapshot!(tokens);
+    }
+
+    #[test]
+    fn should_parse_template_string_with_keyword_substring() {
+        let test_file = r#""${index}""#;
         let tokens = lex(test_file).collect::<Result<Vec<_>, _>>().unwrap();
         assert_yaml_snapshot!(tokens);
     }
