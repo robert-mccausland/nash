@@ -44,9 +44,21 @@ impl Block {
         stack: &mut ExecutorStack,
         context: &mut ExecutorContext,
     ) -> Result<(), ExecutionError> {
+        self.execute_with_initializer(|_| Ok(()), stack, context)
+    }
+
+    pub fn execute_with_initializer<F: FnOnce(&mut ExecutorStack) -> Result<(), ExecutionError>>(
+        &self,
+        initialize: F,
+        stack: &mut ExecutorStack,
+        context: &mut ExecutorContext,
+    ) -> Result<(), ExecutionError> {
+        stack.push_scope();
+        initialize(stack)?;
         for statement in &self.statements {
             statement.execute(stack, context)?;
         }
+        stack.pop_scope();
         return Ok(());
     }
 }

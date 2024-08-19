@@ -58,6 +58,38 @@ impl Display for Value {
     }
 }
 
+impl From<String> for Value {
+    fn from(value: String) -> Self {
+        Value::String(value)
+    }
+}
+
+impl From<i32> for Value {
+    fn from(value: i32) -> Self {
+        Value::Integer(value)
+    }
+}
+
+impl From<bool> for Value {
+    fn from(value: bool) -> Self {
+        Value::Boolean(value)
+    }
+}
+
+impl From<commands::Command> for Value {
+    fn from(value: commands::Command) -> Self {
+        Value::Command(value)
+    }
+}
+
+impl<T: Into<Value>> From<Vec<T>> for Value {
+    fn from(value: Vec<T>) -> Self {
+        Value::Array(Rc::new(RefCell::new(
+            value.into_iter().map(Into::into).collect::<Vec<_>>(),
+        )))
+    }
+}
+
 pub struct Executor {
     context: ExecutorContext,
 }
@@ -94,10 +126,7 @@ impl Executor {
     }
 
     pub(crate) fn execute(&mut self, root: &Root) -> Result<(), ExecutionError> {
-        let mut stack = ExecutorStack {
-            functions: HashMap::new(),
-            variables: HashMap::new(),
-        };
+        let mut stack = ExecutorStack::new();
 
         root.execute(&mut stack, &mut self.context)?;
 
@@ -106,11 +135,26 @@ impl Executor {
 }
 
 pub struct ExecutorStack {
-    pub variables: HashMap<String, Value>,
-    pub functions: HashMap<String, Function>,
+    functions: HashMap<String, Function>,
+    scopes: Vec<ExecutorScope>,
 }
 
 impl ExecutorStack {
+    pub fn new() -> Self {
+        Self {
+            functions: HashMap::new(),
+            scopes: Vec::new(),
+        }
+    }
+
+    pub fn push_scope(&mut self) {
+        self.scopes.push(ExecutorScope::new());
+    }
+
+    pub fn pop_scope(&mut self) {
+        self.scopes.pop();
+    }
+
     pub fn assign_variable(
         &mut self,
         value: Value,
@@ -120,10 +164,10 @@ impl ExecutorStack {
             return Ok(());
         }
 
-        if let Some(variable) = self.variables.get_mut(variable_name) {
+        if let Some(variable) = self.get_variable_mut(variable_name) {
             *variable = value;
         } else {
-            return Err("Couldn't find variable".into());
+            return Err(format!("Couldn't find variable with name: {variable_name}.").into());
         }
 
         Ok(())
@@ -137,20 +181,108 @@ impl ExecutorStack {
         if variable_name == UNDERSCORE {
             return Ok(());
         }
-        if let Some(_) = self.variables.get(variable_name) {
-            return Err("Variable already exists".into());
-        } else {
-            self.variables.insert(variable_name.to_owned(), value);
+
+        let last_scope = self.scopes.last_mut().unwrap();
+        last_scope.declare_variable(value, variable_name);
+
+        Ok(())
+    }
+
+    pub fn declare_function(
+        &mut self,
+        function: Function,
+        function_name: &str,
+    ) -> Result<(), ExecutionError> {
+        if function_name == UNDERSCORE {
+            return Err(format!("Function name must not be _").into());
         }
+
+        if let Some(_) = self.functions.get(function_name) {
+            return Err(format!("Function with name {function_name} already exists").into());
+        }
+
+        self.functions.insert(function_name.to_owned(), function);
 
         Ok(())
     }
 
     pub fn resolve_variable(&self, variable_name: &str) -> Result<Value, ExecutionError> {
         Ok(self
-            .variables
-            .get(variable_name)
-            .ok_or::<ExecutionError>("Variable not found".into())?
+            .get_variable(variable_name)
+            .ok_or::<ExecutionError>(
+                format!("Couldn't find variable with name: {variable_name}.").into(),
+            )?
             .clone())
+    }
+
+    pub fn execute_function(
+        &mut self,
+        function_name: &str,
+        arguments: Vec<Value>,
+        context: &mut ExecutorContext,
+    ) -> Result<Value, ExecutionError> {
+        // Remove function from stack when calling it to avoid double borrowing, means
+        // recursion won't work, but that needs stack frames to work anyway.
+        if let Some(function) = self.functions.remove(function_name) {
+            function.code.execute(self, context)?;
+            self.functions.insert(function_name.to_owned(), function);
+            return Ok(Value::Void);
+        } else {
+            return builtins::call_builtin(function_name, &arguments, context);
+        }
+    }
+
+    fn get_variable(&self, variable_name: &str) -> Option<&Value> {
+        for scope in self.scopes.iter().rev() {
+            if let Some(value) = scope.get_variable(variable_name) {
+                return Some(value);
+            }
+        }
+
+        None
+    }
+
+    fn get_variable_mut(&mut self, variable_name: &str) -> Option<&mut Value> {
+        for scope in self.scopes.iter_mut().rev() {
+            if let Some(value) = scope.get_variable_mut(variable_name) {
+                return Some(value);
+            }
+        }
+
+        None
+    }
+}
+struct ExecutorScope {
+    variables: HashMap<String, Value>,
+    hidden_variables: Vec<Value>,
+}
+
+impl ExecutorScope {
+    fn new() -> Self {
+        Self {
+            variables: HashMap::new(),
+            hidden_variables: Vec::new(),
+        }
+    }
+
+    pub fn declare_variable(&mut self, value: Value, variable_name: &str) {
+        if variable_name == UNDERSCORE {
+            return;
+        }
+
+        if let Some(old) = self.variables.insert(variable_name.to_owned(), value) {
+            // Keep any hidden variables in scope until this scope ends, this means
+            // the deconstruction of them will still happen at the same time if they
+            // are hidden.
+            self.hidden_variables.push(old);
+        }
+    }
+
+    pub fn get_variable(&self, variable_name: &str) -> Option<&Value> {
+        self.variables.get(variable_name)
+    }
+
+    pub fn get_variable_mut(&mut self, variable_name: &str) -> Option<&mut Value> {
+        self.variables.get_mut(variable_name)
     }
 }

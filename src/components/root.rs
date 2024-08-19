@@ -51,13 +51,15 @@ impl Root {
         context: &mut ExecutorContext,
     ) -> Result<(), ExecutionError> {
         for function in &self.functions {
-            stack
-                .functions
-                .insert(function.name.value.to_owned(), function.clone());
+            stack.declare_function(function.clone(), &function.name.value)?;
         }
+
+        stack.push_scope();
         for statement in &self.statements {
             statement.execute(stack, context)?;
         }
+        stack.pop_scope();
+
         return Ok(());
     }
 }

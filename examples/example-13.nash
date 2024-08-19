@@ -1,0 +1,11 @@
+#!/bin/nash
+
+# Scopes
+
+var test = "test";
+out(test);
+{
+  var test = "test2";
+  out(test);
+};
+out(test);

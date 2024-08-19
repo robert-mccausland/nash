@@ -1,0 +1,8 @@
+#!/bin/nash
+
+# Make variables block scoped so we can declare this variable in the for loop :see_no_evil:
+for script in glob("./examples/example-*.nash") {
+  out("Running script ${script}...");
+  var (output) = exec `nash "${script}"`;
+  out(output);
+};

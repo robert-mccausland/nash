@@ -19,6 +19,7 @@ pub fn call_builtin(
         ("fmt", [arg1]) => fmt(context, arg1),
         ("push", [Value::Array(arg1), arg2]) => push(context, arg1.as_ref(), arg2),
         ("pop", [Value::Array(arg1)]) => pop(context, arg1.as_ref()),
+        ("glob", [Value::String(arg1)]) => glob(context, arg1),
         (name, args) => {
             let args = args
                 .iter()
@@ -106,4 +107,26 @@ fn pop(
         })?
         .pop()
         .ok_or::<ExecutionError>("Unable to pop array with no elements".into())?)
+}
+
+fn glob(_context: &mut ExecutorContext, pattern: &str) -> Result<Value, ExecutionError> {
+    let paths = glob::glob(pattern)
+        .map_err::<ExecutionError, _>(|err| {
+            format!("Invalid pattern provided to glob: {err}").into()
+        })?
+        .map(|path| {
+            let path = path
+                .map_err::<ExecutionError, _>(|err| {
+                    format!("Unable to get path while globing: {err}").into()
+                })?
+                .into_os_string()
+                .into_string()
+                .map_err::<ExecutionError, _>(|_| {
+                    format!("Path is not in valid utf-8 encoding").into()
+                })?;
+            return Ok::<Value, ExecutionError>(path.into());
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    return Ok(paths.into());
 }

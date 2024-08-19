@@ -1,0 +1,8 @@
+#!/bin/nash
+
+# While example
+var count = 0;
+while count < 10 {
+  out(fmt(count));
+  count = count + 1;
+};

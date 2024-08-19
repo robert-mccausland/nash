@@ -4,6 +4,7 @@ use crate::{
     utils::iterators::Backtrackable,
 };
 
+mod block;
 mod branch;
 mod collections;
 mod execute;
@@ -17,10 +18,11 @@ use super::{
     Tokens,
 };
 
+use block::BlockExpression;
 use branch::BranchExpression;
 use collections::{ArrayExpression, TupleExpression};
 use execute::ExecuteExpression;
-use loops::ForLoopExpression;
+use loops::{ForLoopExpression, WhileLoopExpression};
 use serde::Serialize;
 use variable::VariableExpression;
 
@@ -174,4 +176,6 @@ expression_content!([
     BranchExpression,
     ExecuteExpression,
     ForLoopExpression,
+    WhileLoopExpression,
+    BlockExpression,
 ]);

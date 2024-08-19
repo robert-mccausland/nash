@@ -2,7 +2,6 @@ use serde::Serialize;
 
 use crate::{
     components::{Evaluatable, Identifier, Tokens},
-    executor::{builtins, Value},
     lexer::TokenValue,
 };
 
@@ -64,15 +63,7 @@ impl Evaluatable for VariableExpression {
                 .map(|arg| arg.evaluate(stack, context))
                 .collect::<Result<Vec<_>, _>>()?;
 
-            // Remove function from stack when calling it to avoid double borrowing, means
-            // recursion won't work, but that needs stack frames to work anyway.
-            if let Some(function) = stack.functions.remove(&self.name.value) {
-                function.code.execute(stack, context)?;
-                stack.functions.insert(self.name.value.to_owned(), function);
-                Ok(Value::Void)
-            } else {
-                builtins::call_builtin(&self.name.value, arguments.as_slice(), context)
-            }
+            stack.execute_function(&self.name.value, arguments, context)
         } else {
             stack.resolve_variable(&self.name.value)
         }
