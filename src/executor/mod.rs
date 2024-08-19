@@ -9,7 +9,7 @@ use std::{
 use commands::CommandExecutor;
 
 use crate::{
-    components::{function::Function, root::Root, Identifier},
+    components::{function::Function, root::Root},
     constants::UNDERSCORE,
     errors::ExecutionError,
     utils::formatting::fmt_collection,
@@ -24,7 +24,7 @@ pub struct ExecutorOptions {
 }
 
 impl ExecutorOptions {
-    fn default() -> Self {
+    pub fn default() -> Self {
         Self {
             max_call_stack_depth: 64,
         }
@@ -253,8 +253,30 @@ impl ExecutorStack {
 
         self.call_stack.push(function_name.to_owned());
         let result = if let Some(function) = self.functions.get(function_name) {
+            if function.arguments.len() != arguments.len() {
+                return Err(format!(
+                    "Function {} requires {} arguments, but {} were provided",
+                    function.name.value,
+                    function.arguments.len(),
+                    arguments.len()
+                )
+                .into());
+            }
+
             // Would be nice to avoid cloning here - but would have to solve some mutability problems
-            function.clone().code.execute(self, context)?;
+            let function = function.clone();
+            function.code.execute_with_initializer(
+                |stack| {
+                    for (value, name) in arguments.into_iter().zip(function.arguments) {
+                        stack.declare_variable(value, &name.value)?;
+                    }
+
+                    Ok(())
+                },
+                self,
+                context,
+            )?;
+
             Value::Void
         } else {
             builtins::call_builtin(function_name, &arguments, context)?

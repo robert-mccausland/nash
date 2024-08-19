@@ -1,0 +1,9 @@
+#!/bin/nash
+
+# Function arguments
+
+func log_info(value) {
+  out("info: ${value}");
+}
+
+log_info("test");

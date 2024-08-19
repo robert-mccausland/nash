@@ -3,7 +3,7 @@ use std::io::Read;
 
 pub use errors::{ExecutionError, LexerError, NashError, ParserError};
 pub use executor::commands::{Command, CommandExecutor, CommandResult, SystemCommandExecutor};
-pub use executor::Executor;
+pub use executor::{Executor, ExecutorOptions};
 
 mod components;
 mod constants;
@@ -38,12 +38,14 @@ pub fn execute<R: Read>(script: &mut R, executor: &mut Executor) -> Result<(), N
         Ok(()) => {}
         Err(err) => {
             eprintln!("Error executing script: {err}");
-            if let Some(call_stack) = err.call_stack {
+            if let Some(call_stack) = &err.call_stack {
                 let formatted_stack = call_stack
                     .into_iter()
                     .fold("@root".to_owned(), |a, b| format!("{b}\n{a}"));
                 eprintln!("Call stack: \n{formatted_stack}");
             }
+
+            return Err(err.into());
         }
     }
 

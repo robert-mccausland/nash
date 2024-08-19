@@ -29,18 +29,36 @@ impl Function {
         };
 
         let Some(TokenValue::LeftBracket()) = tokens.next_value() else {
-            return Err("arguments must be followed by )".into());
+            return Err("function name must be followed by (".into());
         };
 
-        // TODO implement function arguments
+        let mut arguments = Vec::new();
+        if let Some(TokenValue::RightBracket()) = tokens.peek_value() {
+        } else {
+            loop {
+                let Some(TokenValue::Identifier(argument)) = tokens.peek_value() else {
+                    return Err("expected function argument".into());
+                };
+                tokens.next();
 
-        let Some(TokenValue::RightBracket()) = tokens.next_value() else {
-            return Err("arguments must be followed by )".into());
-        };
+                arguments.push((*argument).into());
+
+                if let Some(TokenValue::RightBracket()) = tokens.peek_value() {
+                    break;
+                } else {
+                    let Some(TokenValue::Comma()) = tokens.peek_value() else {
+                        return Err("expected ) or , after function argument".into());
+                    };
+                    tokens.next_value();
+                }
+            }
+        }
+
+        tokens.next_value();
         let code = Block::parse(tokens)?;
 
         return Ok(Some(Function {
-            arguments: Vec::new(),
+            arguments,
             name: (*identifier).into(),
             code,
         }));

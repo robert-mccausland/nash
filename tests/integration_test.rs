@@ -50,7 +50,13 @@ mod tests {
             &mut mock_stderr,
         );
 
-        return Executor::new(mock_command_executor, mock_stdin, mock_stdout, mock_stderr);
+        return Executor::new(
+            mock_command_executor,
+            mock_stdin,
+            mock_stdout,
+            mock_stderr,
+            ExecutorOptions::default(),
+        );
     }
 
     #[test]
