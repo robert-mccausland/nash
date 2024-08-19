@@ -133,12 +133,20 @@ impl_error!(ParserError);
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct ExecutionError {
-    message: String,
+    pub message: String,
+    pub call_stack: Option<Vec<String>>,
 }
 
 impl ExecutionError {
     fn new(message: String) -> Self {
-        Self { message }
+        Self {
+            message,
+            call_stack: None,
+        }
+    }
+
+    pub fn set_call_stack(&mut self, call_stack: Vec<String>) {
+        self.call_stack = Some(call_stack);
     }
 }
 

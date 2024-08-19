@@ -9,7 +9,7 @@ use std::{
 use commands::CommandExecutor;
 
 use crate::{
-    components::{function::Function, root::Root},
+    components::{function::Function, root::Root, Identifier},
     constants::UNDERSCORE,
     errors::ExecutionError,
     utils::formatting::fmt_collection,
@@ -19,11 +19,24 @@ use crate::{
 pub mod builtins;
 pub mod commands;
 
+pub struct ExecutorOptions {
+    max_call_stack_depth: usize,
+}
+
+impl ExecutorOptions {
+    fn default() -> Self {
+        Self {
+            max_call_stack_depth: 64,
+        }
+    }
+}
+
 pub struct ExecutorContext {
     pub command_executor: Box<dyn CommandExecutor>,
     pub stdin: Box<dyn BufRead>,
     pub stdout: Box<dyn Write>,
     pub stderr: Box<dyn Write>,
+    pub options: ExecutorOptions,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -105,6 +118,7 @@ impl Executor {
         stdin: Stdin,
         stdout: Stdout,
         stderr: Stderr,
+        options: ExecutorOptions,
     ) -> Self {
         Executor {
             context: ExecutorContext {
@@ -112,6 +126,7 @@ impl Executor {
                 stdin: Box::new(stdin),
                 stdout: Box::new(stdout),
                 stderr: Box::new(stderr),
+                options,
             },
         }
     }
@@ -122,13 +137,18 @@ impl Executor {
             BufReader::new(stdin()),
             stdout(),
             stderr(),
+            ExecutorOptions::default(),
         )
     }
 
     pub(crate) fn execute(&mut self, root: &Root) -> Result<(), ExecutionError> {
         let mut stack = ExecutorStack::new();
 
-        root.execute(&mut stack, &mut self.context)?;
+        root.execute(&mut stack, &mut self.context)
+            .map_err(|mut err| {
+                err.set_call_stack(stack.call_stack);
+                return err;
+            })?;
 
         return Ok(());
     }
@@ -137,6 +157,7 @@ impl Executor {
 pub struct ExecutorStack {
     functions: HashMap<String, Function>,
     scopes: Vec<ExecutorScope>,
+    call_stack: Vec<String>,
 }
 
 impl ExecutorStack {
@@ -144,6 +165,7 @@ impl ExecutorStack {
         Self {
             functions: HashMap::new(),
             scopes: Vec::new(),
+            call_stack: Vec::new(),
         }
     }
 
@@ -221,15 +243,24 @@ impl ExecutorStack {
         arguments: Vec<Value>,
         context: &mut ExecutorContext,
     ) -> Result<Value, ExecutionError> {
-        // Remove function from stack when calling it to avoid double borrowing, means
-        // recursion won't work, but that needs stack frames to work anyway.
-        if let Some(function) = self.functions.remove(function_name) {
-            function.code.execute(self, context)?;
-            self.functions.insert(function_name.to_owned(), function);
-            return Ok(Value::Void);
-        } else {
-            return builtins::call_builtin(function_name, &arguments, context);
+        if self.call_stack.len() >= context.options.max_call_stack_depth {
+            return Err(format!(
+                "Call stack depth limit of {} exceeded",
+                context.options.max_call_stack_depth
+            )
+            .into());
         }
+
+        self.call_stack.push(function_name.to_owned());
+        let result = if let Some(function) = self.functions.get(function_name) {
+            // Would be nice to avoid cloning here - but would have to solve some mutability problems
+            function.clone().code.execute(self, context)?;
+            Value::Void
+        } else {
+            builtins::call_builtin(function_name, &arguments, context)?
+        };
+        self.call_stack.pop();
+        return Ok(result);
     }
 
     fn get_variable(&self, variable_name: &str) -> Option<&Value> {

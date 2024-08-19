@@ -1,0 +1,22 @@
+#!/bin/nash
+
+# Recursion
+
+var index = 0;
+
+func main() {
+  test();
+}
+
+func test() {
+  {
+    var index = fmt(index);
+    out("iteration ${index}");
+  };
+  index = index + 1;
+  if index < 64 {
+    test();
+  };
+}
+
+main();

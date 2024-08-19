@@ -24,8 +24,8 @@ pub fn execute<R: Read>(script: &mut R, executor: &mut Executor) -> Result<(), N
     let root = match parser::parse(tokens) {
         Ok(root) => root,
         Err(err) => {
-            println!("Error parsing script:");
-            println!(
+            eprintln!("Error parsing script:");
+            eprintln!(
                 "{}",
                 format_error(&err, &content)
                     .unwrap_or("Warning: Unable to write error information".to_owned())
@@ -34,7 +34,18 @@ pub fn execute<R: Read>(script: &mut R, executor: &mut Executor) -> Result<(), N
         }
     };
 
-    executor.execute(&root)?;
+    match executor.execute(&root) {
+        Ok(()) => {}
+        Err(err) => {
+            eprintln!("Error executing script: {err}");
+            if let Some(call_stack) = err.call_stack {
+                let formatted_stack = call_stack
+                    .into_iter()
+                    .fold("@root".to_owned(), |a, b| format!("{b}\n{a}"));
+                eprintln!("Call stack: \n{formatted_stack}");
+            }
+        }
+    }
 
     return Ok(());
 }
