@@ -2,8 +2,8 @@
 
 # Function arguments
 
-func log_info(value) {
-  out("info: ${value}");
+func function(one, two, three) {
+  out("${one} ${two} ${three}");
 }
 
-log_info("test");
+function("test", "test2", "test3");
