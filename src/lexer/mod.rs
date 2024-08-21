@@ -43,6 +43,7 @@ pub enum TokenValue<'a> {
     DoubleQuote(),
     Comma(),
     Dollar(),
+    Bang(),
     Backtick(),
 }
 

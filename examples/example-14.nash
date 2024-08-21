@@ -2,21 +2,15 @@
 
 # Recursion
 
-var index = 0;
-
-func main() {
-  test();
-}
-
-func test() {
+func recurse(index) {
   {
     var index = fmt(index);
     out("iteration ${index}");
   };
   index = index + 1;
   if index < 5 {
-    test();
+    recurse(index);
   };
 }
 
-main();
+recurse(0);

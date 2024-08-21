@@ -5,8 +5,6 @@ use super::{LexerContext, TokenValue};
 const SEMICOLON: &str = ";";
 const COMMA: &str = ",";
 const HASH: &str = "#";
-const DOUBLE_QUOTE: &str = "\"";
-const ESCAPED_DOUBLE_QUOTE: &str = "\\\"";
 const EQUALS: &str = "=";
 const PLUS: &str = "+";
 const LEFT_BRACKET: &str = "(";
@@ -21,6 +19,9 @@ const QUESTION: &str = "?";
 const DOT: &str = ".";
 const COLON: &str = ":";
 const DOLLAR: &str = "$";
+const BANG: &str = "!";
+const DOUBLE_QUOTE: &str = "\"";
+const ESCAPED_DOUBLE_QUOTE: &str = "\\\"";
 const ESCAPED_DOLLAR: &str = "\\$";
 const BACKTICK: &str = "`";
 const ESCAPED_BACKTICK: &str = "\\`";
@@ -47,6 +48,7 @@ pub enum TokenKind {
     Colon,
     Semicolon,
     Comma,
+    Bang,
     DoubleQuote,
     Dollar,
     Backtick,
@@ -75,6 +77,7 @@ impl TokenKind {
             TokenKind::Colon => Some(TokenValue::Colon()),
             TokenKind::Semicolon => Some(TokenValue::Semicolon()),
             TokenKind::Comma => Some(TokenValue::Comma()),
+            TokenKind::Bang => Some(TokenValue::Bang()),
             TokenKind::DoubleQuote => Some(TokenValue::DoubleQuote()),
             TokenKind::Dollar => Some(TokenValue::Dollar()),
             TokenKind::Backtick => Some(TokenValue::Backtick()),
@@ -116,6 +119,7 @@ pub fn try_get_token_kind(
             COLON => Some(TokenKind::Colon),
             SEMICOLON => Some(TokenKind::Semicolon),
             COMMA => Some(TokenKind::Comma),
+            BANG => Some(TokenKind::Bang),
             _ => {
                 if KEYWORDS.contains(&current) {
                     Some(TokenKind::Keyword)
@@ -548,5 +552,11 @@ mod tests {
         should_parse_colon,
         (":", vec![LexerContext::Root]),
         (Some(TokenKind::Colon))
+    );
+
+    test_case!(
+        should_parse_bang,
+        ("!", vec![LexerContext::Root]),
+        (Some(TokenKind::Bang))
     );
 }

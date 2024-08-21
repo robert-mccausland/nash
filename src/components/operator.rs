@@ -12,7 +12,8 @@ pub enum Operator {
     LessThan,
     GreaterThan,
     Addition,
-    Equals,
+    Equal,
+    NotEqual,
     Pipe,
 }
 
@@ -44,7 +45,14 @@ impl Operator {
                 }
 
                 if let Some(TokenValue::Equals()) = next {
-                    return Some(Operator::Equals);
+                    return Some(Operator::Equal);
+                }
+            }
+
+            if let TokenValue::Bang() = next {
+                let next = tokens.next_value();
+                if let Some(TokenValue::Equals()) = next {
+                    return Some(Operator::NotEqual);
                 }
             }
 
@@ -63,16 +71,19 @@ impl Operator {
             (Operator::Addition, Value::Integer(left), Value::Integer(right)) => {
                 Ok(Value::Integer(left + right))
             }
-            (Operator::Equals, Value::Integer(left), Value::Integer(right)) => {
-                Ok(Value::Boolean(left == right))
-            }
+            (Operator::Equal, left, right) => Ok(Value::Boolean(left == right)),
+            (Operator::NotEqual, left, right) => Ok(Value::Boolean(left != right)),
             (Operator::Pipe, Value::Command(left), Value::Command(right)) => Ok(Value::Command(
                 left.try_pipe_command(right, OutputSource::Stdout)
-                    .ok_or::<ExecutionError>("Command already has a file it is piping to".into())?,
+                    .ok_or::<ExecutionError>(
+                        "Unable to pipe command if it has already been piped to a file".into(),
+                    )?,
             )),
             (Operator::Pipe, Value::Command(left), Value::String(right)) => Ok(Value::Command(
                 left.try_pipe_file(right, OutputSource::Stdout)
-                    .ok_or::<ExecutionError>("Command already has a file it is piping to".into())?,
+                    .ok_or::<ExecutionError>(
+                        "Unable to pipe command if it has already been piped to a file".into(),
+                    )?,
             )),
             (operator, left, right) => {
                 Err(format!("Invalid operator expression {left:?} {operator:?} {right:?}.").into())

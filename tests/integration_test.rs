@@ -163,4 +163,15 @@ push(array, 3);
 out(fmt(array));
 "#
     );
+
+    nash_test!(
+        should_not_access_outer_scopes_from_function,
+        r#"
+var test = "hi";
+func my_function() {
+  out(test);
+}
+my_function();
+        "#
+    );
 }

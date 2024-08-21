@@ -19,6 +19,7 @@ pub fn call_builtin(
         ("fmt", [arg1]) => fmt(context, arg1),
         ("push", [Value::Array(arg1, _), arg2]) => push(context, arg1.as_ref(), arg2),
         ("pop", [Value::Array(arg1, _)]) => pop(context, arg1.as_ref()),
+        ("len", [Value::Array(arg1, _)]) => len(context, arg1.as_ref()),
         ("glob", [Value::String(arg1)]) => glob(context, arg1),
         (name, args) => {
             let args = args
@@ -107,6 +108,21 @@ fn pop(
         })?
         .pop()
         .ok_or::<ExecutionError>("Unable to pop array with no elements".into())?)
+}
+
+fn len(
+    _context: &mut ExecutorContext,
+    array: &RefCell<Vec<Value>>,
+) -> Result<Value, ExecutionError> {
+    Ok(Value::Integer(
+        array
+            .borrow()
+            .len()
+            .try_into()
+            .map_err::<ExecutionError, _>(|err| {
+                format!("Unable to convert array length into i32: {err}").into()
+            })?,
+    ))
 }
 
 fn glob(_context: &mut ExecutorContext, pattern: &str) -> Result<Value, ExecutionError> {

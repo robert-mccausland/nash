@@ -1,7 +1,28 @@
 #!/bin/nash
 
+# Disgusting hack because you can't declare empty arrays at the moment
+var failures = [""];
+pop(failures);
+
 for script in glob("./examples/*.nash") {
   out("Running script ${script}...");
-  var (output) = exec `nash "${script}"`;
+  var (output, err) = exec `nash "${script}"` ? var code;
   out(output);
+
+  if code != 0 {
+    var code = fmt(code);
+    out("Nash script exited with non-zero code (${code})");
+    out(output);
+    out(err);
+    push(failures, script);
+  } else {
+    out("Nash script  ${script} succeeded");
+  };
+
+  out("");
+};
+
+if len(failures) != 0 {
+  out("Some scripts failed to execute!");
+  out(fmt(failures));
 };

@@ -344,6 +344,9 @@ impl ExecutorStack {
                 .into());
             }
 
+            // Replace current scope with an empty scope to prevent function from accessing outer scope
+            let outer_scope = core::mem::replace(&mut self.scopes, Vec::new());
+
             // Would be nice to avoid cloning here - but would have to solve some mutability problems
             let function = function.clone();
             function.code.execute_with_initializer(
@@ -357,6 +360,7 @@ impl ExecutorStack {
                 self,
                 context,
             )?;
+            self.scopes = outer_scope;
 
             Value::Void
         } else {
