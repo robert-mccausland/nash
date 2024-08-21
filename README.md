@@ -34,5 +34,5 @@ The example scripts should all run correctly, in order to have more consistency 
 docker compose up --build -d
 docker compose exec nash bash
 cd /home/nash
-./scripts/run-examples
+nash ./scripts/run-examples.nash
 ```

@@ -115,6 +115,7 @@ for value in array {
 };
 "#
     );
+
     nash_test!(
         should_error_when_creating_array_with_inconsistent_types,
         r#"
@@ -128,6 +129,7 @@ var variable = ["test", 123];
 var variable = [];
 "#
     );
+
     nash_test!(
         should_error_when_assigning_variable_to_wrong_type,
         r#"
