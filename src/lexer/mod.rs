@@ -38,6 +38,7 @@ pub enum TokenValue<'a> {
     RightSquare(),
     Question(),
     Dot(),
+    Colon(),
     Semicolon(),
     DoubleQuote(),
     Comma(),

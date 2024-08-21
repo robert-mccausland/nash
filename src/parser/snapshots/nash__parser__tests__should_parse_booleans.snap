@@ -1,9 +1,9 @@
 ---
 source: src/parser/mod.rs
-expression: parse(tokens.iter()).unwrap()
+expression: parse(tokens).unwrap()
 ---
 statements:
-  - Declaration:
+  - DeclarationAssignment:
       - Simple:
           value: my_variable
       - operations: []

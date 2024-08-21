@@ -1,5 +1,3 @@
-use std::{cell::RefCell, rc::Rc};
-
 use serde::Serialize;
 
 use crate::{
@@ -116,10 +114,17 @@ impl Evaluatable for ArrayExpression {
         stack: &mut crate::executor::ExecutorStack,
         context: &mut crate::executor::ExecutorContext,
     ) -> Result<Value, crate::errors::ExecutionError> {
-        Ok(Value::Array(Rc::new(RefCell::new(evaluate_collection(
-            &self.values,
-            stack,
-            context,
-        )?))))
+        let values = evaluate_collection(&self.values, stack, context)?;
+        let mut array_types = values.iter().map(|x| x.get_type());
+        let Some(array_type) = array_types.next() else {
+            return Err("Unable to determine array type for empty array".into());
+        };
+        for item in array_types {
+            if item != array_type {
+                return Err("Array must have all values of the same type".into());
+            }
+        }
+
+        return Ok(Value::new_array(values, array_type)?);
     }
 }

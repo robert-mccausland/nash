@@ -14,6 +14,7 @@ pub mod literals;
 pub mod operator;
 pub mod root;
 pub mod statement;
+pub mod type_definition;
 
 trait Tokens<'a> {
     fn next_value(&mut self) -> Option<&'a TokenValue<'a>>;

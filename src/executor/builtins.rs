@@ -2,7 +2,7 @@ use std::cell::RefCell;
 
 use crate::errors::ExecutionError;
 
-use super::{ExecutorContext, Value};
+use super::{ExecutorContext, Type, Value};
 
 const READ_BUF_SIZE: usize = 256;
 
@@ -17,8 +17,8 @@ pub fn call_builtin(
         ("err", [Value::String(arg1)]) => err(context, arg1),
         ("out", [Value::String(arg1)]) => out(context, arg1),
         ("fmt", [arg1]) => fmt(context, arg1),
-        ("push", [Value::Array(arg1), arg2]) => push(context, arg1.as_ref(), arg2),
-        ("pop", [Value::Array(arg1)]) => pop(context, arg1.as_ref()),
+        ("push", [Value::Array(arg1, _), arg2]) => push(context, arg1.as_ref(), arg2),
+        ("pop", [Value::Array(arg1, _)]) => pop(context, arg1.as_ref()),
         ("glob", [Value::String(arg1)]) => glob(context, arg1),
         (name, args) => {
             let args = args
@@ -124,9 +124,9 @@ fn glob(_context: &mut ExecutorContext, pattern: &str) -> Result<Value, Executio
                 .map_err::<ExecutionError, _>(|_| {
                     format!("Path is not in valid utf-8 encoding").into()
                 })?;
-            return Ok::<Value, ExecutionError>(path.into());
+            return Ok::<String, ExecutionError>(path);
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    return Ok(paths.into());
+    return Ok(Value::new_array(paths, Type::String)?);
 }

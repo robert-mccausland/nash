@@ -19,6 +19,7 @@ const LEFT_SQUARE: &str = "[";
 const RIGHT_SQUARE: &str = "]";
 const QUESTION: &str = "?";
 const DOT: &str = ".";
+const COLON: &str = ":";
 const DOLLAR: &str = "$";
 const ESCAPED_DOLLAR: &str = "\\$";
 const BACKTICK: &str = "`";
@@ -43,6 +44,7 @@ pub enum TokenKind {
     RightSquare,
     Question,
     Dot,
+    Colon,
     Semicolon,
     Comma,
     DoubleQuote,
@@ -70,6 +72,7 @@ impl TokenKind {
             TokenKind::RightSquare => Some(TokenValue::RightSquare()),
             TokenKind::Question => Some(TokenValue::Question()),
             TokenKind::Dot => Some(TokenValue::Dot()),
+            TokenKind::Colon => Some(TokenValue::Colon()),
             TokenKind::Semicolon => Some(TokenValue::Semicolon()),
             TokenKind::Comma => Some(TokenValue::Comma()),
             TokenKind::DoubleQuote => Some(TokenValue::DoubleQuote()),
@@ -110,6 +113,7 @@ pub fn try_get_token_kind(
             RIGHT_SQUARE => Some(TokenKind::RightSquare),
             QUESTION => Some(TokenKind::Question),
             DOT => Some(TokenKind::Dot),
+            COLON => Some(TokenKind::Colon),
             SEMICOLON => Some(TokenKind::Semicolon),
             COMMA => Some(TokenKind::Comma),
             _ => {
@@ -538,5 +542,11 @@ mod tests {
         should_parse_right_square,
         ("]", vec![LexerContext::Root]),
         (Some(TokenKind::RightSquare))
+    );
+
+    test_case!(
+        should_parse_colon,
+        (":", vec![LexerContext::Root]),
+        (Some(TokenKind::Colon))
     );
 }

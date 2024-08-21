@@ -1,0 +1,10 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nvar variable = [];\n\"#)"
+---
+stdout: ""
+stderr: ""
+error:
+  ExecutionError:
+    message: Unable to determine array type for empty array
+    call_stack: []

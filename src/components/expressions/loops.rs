@@ -49,13 +49,13 @@ impl Evaluatable for ForLoopExpression {
         stack: &mut crate::executor::ExecutorStack,
         context: &mut crate::executor::ExecutorContext,
     ) -> Result<crate::executor::Value, crate::errors::ExecutionError> {
-        let Value::Array(array) = self.array_expression.evaluate(stack, context)? else {
+        let Value::Array(array, _) = self.array_expression.evaluate(stack, context)? else {
             return Err("for ... in loop must be used on an array value".into());
         };
 
         for item in array.as_ref().borrow().iter() {
             self.loop_body.execute_with_initializer(
-                |stack| stack.declare_variable(item.clone(), &self.item_name.value),
+                |stack| stack.declare_and_assign_variable(&self.item_name.value, item.clone()),
                 stack,
                 context,
             )?;

@@ -1,0 +1,10 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nvar variable: string;\nout(variable);\n\"#)"
+---
+stdout: ""
+stderr: ""
+error:
+  ExecutionError:
+    message: Variable variable has not been initialized.
+    call_stack: []

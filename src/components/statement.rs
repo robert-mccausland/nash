@@ -10,12 +10,14 @@ use crate::{
 use super::{
     errors::{ExecutionError, ParserError},
     expressions::Expression,
+    type_definition::TypeDefinition,
     Identifier, Tokens,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum Statement {
-    Declaration(Assignment, Expression),
+    Declaration(Identifier, TypeDefinition),
+    DeclarationAssignment(Assignment, Expression),
     Assignment(Assignment, Expression),
     Expression(Expression),
 }
@@ -38,11 +40,14 @@ impl Statement {
         context: &mut ExecutorContext,
     ) -> Result<(), ExecutionError> {
         match self {
+            Statement::Declaration(variable_name, type_definition) => {
+                stack.declare_variable(&variable_name.value, type_definition.value.clone())?;
+            }
             Statement::Assignment(assignment, expression) => {
                 let result = expression.evaluate(stack, context)?;
                 match assignment {
                     Assignment::Simple(identifier) => {
-                        stack.assign_variable(result, &identifier.value)?;
+                        stack.assign_variable(&identifier.value, result)?;
                     }
                     Assignment::Tuple(identifiers) => {
                         let Value::Tuple(result) = result else {
@@ -56,16 +61,16 @@ impl Statement {
                         }
 
                         for (identifier, result) in identifiers.iter().zip(result) {
-                            stack.assign_variable(result, &identifier.value)?;
+                            stack.assign_variable(&identifier.value, result)?;
                         }
                     }
                 }
             }
-            Statement::Declaration(assignment, expression) => {
+            Statement::DeclarationAssignment(assignment, expression) => {
                 let result = expression.evaluate(stack, context)?;
                 match assignment {
                     Assignment::Simple(identifier) => {
-                        stack.declare_variable(result, &identifier.value)?;
+                        stack.declare_and_assign_variable(&identifier.value, result)?;
                     }
                     Assignment::Tuple(identifiers) => {
                         let Value::Tuple(result) = result else {
@@ -79,7 +84,7 @@ impl Statement {
                         }
 
                         for (identifier, result) in identifiers.iter().zip(result) {
-                            stack.declare_variable(result, &identifier.value)?;
+                            stack.declare_and_assign_variable(&identifier.value, result)?;
                         }
                     }
                 }
@@ -99,12 +104,24 @@ impl Statement {
         // Any statement starting with var must be a declaration
         if let Some(TokenValue::Keyword(VAR)) = next {
             tokens.next();
-            let assignment = Assignment::try_parse(tokens)
-                .ok_or::<ParserError>("var must be followed by an assignment".into())?;
-            return Ok(Statement::Declaration(
-                assignment,
-                Expression::parse(tokens)?,
-            ));
+            return if let Some(assignment) = Assignment::try_parse(tokens) {
+                Ok(Statement::DeclarationAssignment(
+                    assignment,
+                    Expression::parse(tokens)?,
+                ))
+            } else {
+                let Some(TokenValue::Identifier(value)) = tokens.peek_value() else {
+                    return Err("var must be followed by assignment or identifier".into());
+                };
+                tokens.next();
+                let Some(TokenValue::Colon()) = tokens.peek_value() else {
+                    return Err("variable declaration must be followed by a :".into());
+                };
+                tokens.next();
+
+                let type_definition = TypeDefinition::parse(tokens)?;
+                Ok(Statement::Declaration((*value).into(), type_definition))
+            };
         }
 
         if let Some(assignment) = Assignment::try_parse(tokens) {

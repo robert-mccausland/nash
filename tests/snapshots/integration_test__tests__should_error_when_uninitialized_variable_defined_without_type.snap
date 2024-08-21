@@ -1,0 +1,12 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nvar variable;\n\"#)"
+---
+stdout: ""
+stderr: ""
+error:
+  ParserError:
+    message: "variable declaration must be followed by a :"
+    token: Semicolon
+    start: 13
+    end: 14

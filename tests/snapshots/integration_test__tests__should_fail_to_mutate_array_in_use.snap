@@ -1,8 +1,11 @@
 ---
 source: tests/integration_test.rs
-expression: "nash::execute(&mut test_code.as_bytes(), &mut executor).unwrap_err()"
+expression: "run_code(r#\"\n# Array example\nvar array = [\"first\", \"second\", \"third\"];\nfor value in array {\n  pop(array);\n};\n\"#)"
 ---
-ExecutionError:
-  message: Cannot mutate array that is already being used
-  call_stack:
-    - pop
+stdout: ""
+stderr: ""
+error:
+  ExecutionError:
+    message: Cannot mutate array that is already being used
+    call_stack:
+      - pop

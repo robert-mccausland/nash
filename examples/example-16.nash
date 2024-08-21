@@ -1,0 +1,12 @@
+#!/bin/nash
+
+# Uninitialized variables
+
+var test: string;
+if true {
+  test = "yes";
+} else {
+  test = "no";
+};
+
+out(test);

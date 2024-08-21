@@ -75,10 +75,13 @@ impl Evaluatable for ExecuteExpression {
 
             match &self.capture_exit_code {
                 Some(CaptureExitCode::Assignment(identifier)) => {
-                    stack.assign_variable(Value::Integer(exit_code.into()), &identifier.value)?;
+                    stack.assign_variable(&identifier.value, Value::Integer(exit_code.into()))?;
                 }
                 Some(CaptureExitCode::Declaration(identifier)) => {
-                    stack.declare_variable(Value::Integer(exit_code.into()), &identifier.value)?;
+                    stack.declare_and_assign_variable(
+                        &identifier.value,
+                        Value::Integer(exit_code.into()),
+                    )?;
                 }
                 None => {
                     if exit_code != 0 {

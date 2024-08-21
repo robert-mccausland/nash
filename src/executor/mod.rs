@@ -7,6 +7,7 @@ use std::{
 };
 
 use commands::CommandExecutor;
+use serde::Serialize;
 
 use crate::{
     components::{function::Function, root::Root},
@@ -31,11 +32,11 @@ impl ExecutorOptions {
     }
 }
 
-pub struct ExecutorContext {
-    pub command_executor: Box<dyn CommandExecutor>,
-    pub stdin: Box<dyn BufRead>,
-    pub stdout: Box<dyn Write>,
-    pub stderr: Box<dyn Write>,
+pub struct ExecutorContext<'a> {
+    pub command_executor: Box<dyn CommandExecutor + 'a>,
+    pub stdin: Box<dyn BufRead + 'a>,
+    pub stdout: Box<dyn Write + 'a>,
+    pub stderr: Box<dyn Write + 'a>,
     pub options: ExecutorOptions,
 }
 
@@ -47,8 +48,43 @@ pub enum Value {
     Integer(i32),
     Boolean(bool),
     Command(commands::Command),
-    Array(Rc<RefCell<Vec<Value>>>),
+    Array(Rc<RefCell<Vec<Value>>>, Type),
     Tuple(Vec<Value>),
+}
+
+impl Value {
+    pub fn get_type(&self) -> Type {
+        match self {
+            Value::Void => Type::Void,
+            Value::String(_) => Type::String,
+            Value::Integer(_) => Type::Integer,
+            Value::Boolean(_) => Type::Boolean,
+            Value::Command(_) => Type::Command,
+            Value::Array(_, value_type) => Type::Array(value_type.clone().into()),
+            Value::Tuple(values) => {
+                Type::Tuple(values.iter().map(|x| x.get_type()).collect::<Vec<_>>())
+            }
+        }
+    }
+
+    pub fn new_array<I: IntoIterator<Item = T>, T: Into<Value>>(
+        values: I,
+        array_type: Type,
+    ) -> Result<Value, ExecutionError> {
+        let values = values
+            .into_iter()
+            .map(|value| {
+                let value = value.into();
+                if value.get_type() != array_type {
+                    Err("Array item did not match array type")
+                } else {
+                    Ok(value)
+                }
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Self::Array(Rc::new(RefCell::new(values)), array_type))
+    }
 }
 
 impl Display for Value {
@@ -63,7 +99,7 @@ impl Display for Value {
             Value::Integer(data) => data.fmt(f)?,
             Value::Boolean(data) => data.fmt(f)?,
             Value::Command(data) => data.fmt(f)?,
-            Value::Array(data) => fmt_collection("[", ",", "]", data.borrow().iter(), f)?,
+            Value::Array(data, _) => fmt_collection("[", ",", "]", data.borrow().iter(), f)?,
             Value::Tuple(data) => fmt_collection("(", ",", ")", data.iter(), f)?,
         };
 
@@ -95,24 +131,47 @@ impl From<commands::Command> for Value {
     }
 }
 
-impl<T: Into<Value>> From<Vec<T>> for Value {
-    fn from(value: Vec<T>) -> Self {
-        Value::Array(Rc::new(RefCell::new(
-            value.into_iter().map(Into::into).collect::<Vec<_>>(),
-        )))
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub enum Type {
+    Void,
+    String,
+    Integer,
+    Boolean,
+    Command,
+    Array(Box<Type>),
+    Tuple(Vec<Type>),
+}
+
+impl Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Type::Void => f.write_str("void"),
+            Type::String => f.write_str("string"),
+            Type::Integer => f.write_str("integer"),
+            Type::Boolean => f.write_str("boolean"),
+            Type::Command => f.write_str("command"),
+            Type::Array(array_type) => {
+                f.write_str("[")?;
+                array_type.fmt(f)?;
+                f.write_str("]")?;
+
+                Ok(())
+            }
+            Type::Tuple(item_types) => fmt_collection("(", ",", ")", item_types.iter(), f),
+        }
     }
 }
 
-pub struct Executor {
-    context: ExecutorContext,
+pub struct Executor<'a> {
+    context: ExecutorContext<'a>,
 }
 
-impl Executor {
+impl<'a> Executor<'a> {
     pub fn new<
-        T: CommandExecutor + 'static,
-        Stdin: BufRead + 'static,
-        Stdout: Write + 'static,
-        Stderr: Write + 'static,
+        T: CommandExecutor + 'a,
+        Stdin: BufRead + 'a,
+        Stdout: Write + 'a,
+        Stderr: Write + 'a,
     >(
         command_executor: T,
         stdin: Stdin,
@@ -177,17 +236,35 @@ impl ExecutorStack {
         self.scopes.pop();
     }
 
+    pub fn declare_and_assign_variable(
+        &mut self,
+        variable_name: &str,
+        value: Value,
+    ) -> Result<(), ExecutionError> {
+        self.declare_variable(variable_name, value.get_type())?;
+        self.assign_variable(variable_name, value)?;
+
+        Ok(())
+    }
+
     pub fn assign_variable(
         &mut self,
-        value: Value,
         variable_name: &str,
+        value: Value,
     ) -> Result<(), ExecutionError> {
         if variable_name == UNDERSCORE {
             return Ok(());
         }
 
         if let Some(variable) = self.get_variable_mut(variable_name) {
-            *variable = value;
+            let variable_type = &variable.value_type;
+            let value_type = value.get_type();
+            if *variable_type != value_type {
+                return Err(
+                    format!("Can not assign a value of type {variable_type} to a variable of type {value_type}").into(),
+                );
+            }
+            variable.value = Some(value);
         } else {
             return Err(format!("Couldn't find variable with name: {variable_name}.").into());
         }
@@ -197,23 +274,23 @@ impl ExecutorStack {
 
     pub fn declare_variable(
         &mut self,
-        value: Value,
         variable_name: &str,
+        value_type: Type,
     ) -> Result<(), ExecutionError> {
         if variable_name == UNDERSCORE {
             return Ok(());
         }
 
         let last_scope = self.scopes.last_mut().unwrap();
-        last_scope.declare_variable(value, variable_name);
+        last_scope.declare_variable(variable_name, value_type);
 
         Ok(())
     }
 
     pub fn declare_function(
         &mut self,
-        function: Function,
         function_name: &str,
+        function: Function,
     ) -> Result<(), ExecutionError> {
         if function_name == UNDERSCORE {
             return Err(format!("Function name must not be _").into());
@@ -234,7 +311,11 @@ impl ExecutorStack {
             .ok_or::<ExecutionError>(
                 format!("Couldn't find variable with name: {variable_name}.").into(),
             )?
-            .clone())
+            .value
+            .clone()
+            .ok_or::<ExecutionError>(
+                format!("Variable {variable_name} has not been initialized.").into(),
+            )?)
     }
 
     pub fn execute_function(
@@ -268,7 +349,7 @@ impl ExecutorStack {
             function.code.execute_with_initializer(
                 |stack| {
                     for (value, name) in arguments.into_iter().zip(function.arguments) {
-                        stack.declare_variable(value, &name.value)?;
+                        stack.declare_and_assign_variable(&name.value, value)?;
                     }
 
                     Ok(())
@@ -285,20 +366,20 @@ impl ExecutorStack {
         return Ok(result);
     }
 
-    fn get_variable(&self, variable_name: &str) -> Option<&Value> {
+    fn get_variable(&self, variable_name: &str) -> Option<&Variable> {
         for scope in self.scopes.iter().rev() {
-            if let Some(value) = scope.get_variable(variable_name) {
-                return Some(value);
+            if let Some(variable) = scope.get_variable(variable_name) {
+                return Some(variable);
             }
         }
 
         None
     }
 
-    fn get_variable_mut(&mut self, variable_name: &str) -> Option<&mut Value> {
+    fn get_variable_mut(&mut self, variable_name: &str) -> Option<&mut Variable> {
         for scope in self.scopes.iter_mut().rev() {
-            if let Some(value) = scope.get_variable_mut(variable_name) {
-                return Some(value);
+            if let Some(variable) = scope.get_variable_mut(variable_name) {
+                return Some(variable);
             }
         }
 
@@ -306,8 +387,8 @@ impl ExecutorStack {
     }
 }
 struct ExecutorScope {
-    variables: HashMap<String, Value>,
-    hidden_variables: Vec<Value>,
+    variables: HashMap<String, Variable>,
+    hidden_variables: Vec<Variable>,
 }
 
 impl ExecutorScope {
@@ -318,12 +399,15 @@ impl ExecutorScope {
         }
     }
 
-    pub fn declare_variable(&mut self, value: Value, variable_name: &str) {
+    pub fn declare_variable(&mut self, variable_name: &str, value_type: Type) {
         if variable_name == UNDERSCORE {
             return;
         }
 
-        if let Some(old) = self.variables.insert(variable_name.to_owned(), value) {
+        if let Some(old) = self
+            .variables
+            .insert(variable_name.to_owned(), Variable::new(value_type))
+        {
             // Keep any hidden variables in scope until this scope ends, this means
             // the deconstruction of them will still happen at the same time if they
             // are hidden.
@@ -331,11 +415,25 @@ impl ExecutorScope {
         }
     }
 
-    pub fn get_variable(&self, variable_name: &str) -> Option<&Value> {
+    pub fn get_variable(&self, variable_name: &str) -> Option<&Variable> {
         self.variables.get(variable_name)
     }
 
-    pub fn get_variable_mut(&mut self, variable_name: &str) -> Option<&mut Value> {
+    pub fn get_variable_mut(&mut self, variable_name: &str) -> Option<&mut Variable> {
         self.variables.get_mut(variable_name)
+    }
+}
+
+struct Variable {
+    pub value: Option<Value>,
+    pub value_type: Type,
+}
+
+impl Variable {
+    fn new(value_type: Type) -> Self {
+        Self {
+            value: None,
+            value_type,
+        }
     }
 }

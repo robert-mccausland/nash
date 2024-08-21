@@ -51,7 +51,7 @@ impl Root {
         context: &mut ExecutorContext,
     ) -> Result<(), ExecutionError> {
         for function in &self.functions {
-            stack.declare_function(function.clone(), &function.name.value)?;
+            stack.declare_function(&function.name.value, function.clone())?;
         }
 
         stack.push_scope();
