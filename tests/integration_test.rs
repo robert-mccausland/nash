@@ -4,35 +4,13 @@ mod tests {
     use mockall::{mock, predicate};
     use nash::*;
     use serde::Serialize;
-    use std::io::{BufRead, Read, Result as IoResult, Write};
+    use std::io::{BufReader, Result as IoResult};
 
     mock! {
         pub CommandExecutor {}
 
         impl CommandExecutor for CommandExecutor {
             fn run(&self, command: &Command) -> IoResult<CommandResult>;
-        }
-    }
-
-    mock! {
-        pub In {}
-
-        impl Read for In {
-            fn read(&mut self, buf: &mut [u8]) -> IoResult<usize>;
-        }
-
-        impl BufRead for In {
-            fn fill_buf<'a>(&'a mut self) -> IoResult<&'a [u8]>;
-            fn consume(&mut self, amt: usize);
-        }
-    }
-
-    mock! {
-        pub Out {}
-
-        impl Write for Out {
-            fn write(&mut self, buf: &[u8]) -> IoResult<usize>;
-            fn flush(&mut self) -> IoResult<()>;
         }
     }
 
@@ -44,24 +22,25 @@ mod tests {
     }
 
     fn run_code(script: &str) -> CodeOutput {
-        run_code_with_setup(script, |_, _| {})
+        run_code_with_setup(script, |_| {})
     }
 
-    fn run_code_with_setup<F: FnOnce(&mut MockCommandExecutor, &mut MockIn)>(
+    fn run_code_with_setup<F: FnOnce(&mut MockCommandExecutor)>(
         script: &str,
         setup: F,
     ) -> CodeOutput {
+        let input = Vec::new();
         let mut mock_command_executor = MockCommandExecutor::new();
-        let mut mock_in = MockIn::new();
+        let mut mock_in = BufReader::new(&input[..]);
         let mut mock_out = Vec::new();
         let mut mock_err = Vec::new();
 
-        setup(&mut mock_command_executor, &mut mock_in);
+        setup(&mut mock_command_executor);
 
         let error = {
             let mut executor = Executor::new(
                 mock_command_executor,
-                mock_in,
+                &mut mock_in,
                 &mut mock_out,
                 &mut mock_err,
                 ExecutorOptions::default(),
@@ -108,7 +87,7 @@ func main() {
 
 main();
 "#,
-        |mock_command_executor, _| {
+        |mock_command_executor| {
             mock_command_executor
                 .expect_run()
                 .with(predicate::eq(Command::new(
