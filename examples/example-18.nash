@@ -1,0 +1,17 @@
+#!/bin/nash
+
+# If else expressions
+
+func test(input) {
+  if input == 1 {
+    out("one");
+  } else if input == 2 {
+    out("two");
+  } else {
+    out("idk");
+  };
+}
+
+for index in [1, 2, 3] {
+  test(index);
+};
