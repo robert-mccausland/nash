@@ -54,11 +54,13 @@ impl Evaluatable for ForLoopExpression {
         };
 
         for item in array.as_ref().borrow().iter() {
-            self.loop_body.execute_with_initializer(
+            if let Some(_) = self.loop_body.execute_with_initializer(
                 |stack| stack.declare_and_assign_variable(&self.item_name.value, item.clone()),
                 stack,
                 context,
-            )?;
+            )? {
+                return Err("Control flow options not supported in loops".into());
+            }
         }
 
         Ok(Value::Void)
@@ -105,7 +107,9 @@ impl Evaluatable for WhileLoopExpression {
                 return Ok(Value::Void);
             }
 
-            self.loop_body.execute(stack, context)?;
+            if let Some(_) = self.loop_body.execute(stack, context)? {
+                return Err("Control flow options not supported in loops".into());
+            }
         }
     }
 }

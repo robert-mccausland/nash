@@ -8,7 +8,7 @@ use crate::{
 
 use super::{
     errors::{ExecutionError, ParserError},
-    statement::Statement,
+    statement::{ControlFlowOptions, Statement},
     Tokens,
 };
 
@@ -43,7 +43,7 @@ impl Block {
         &self,
         stack: &mut ExecutorStack,
         context: &mut ExecutorContext,
-    ) -> Result<(), ExecutionError> {
+    ) -> Result<Option<ControlFlowOptions>, ExecutionError> {
         self.execute_with_initializer(|_| Ok(()), stack, context)
     }
 
@@ -52,13 +52,15 @@ impl Block {
         initialize: F,
         stack: &mut ExecutorStack,
         context: &mut ExecutorContext,
-    ) -> Result<(), ExecutionError> {
+    ) -> Result<Option<ControlFlowOptions>, ExecutionError> {
         stack.push_scope();
         initialize(stack)?;
         for statement in &self.statements {
-            statement.execute(stack, context)?;
+            if let Some(control_flow) = statement.execute(stack, context)? {
+                return Ok(Some(control_flow));
+            }
         }
         stack.pop_scope();
-        return Ok(());
+        return Ok(None);
     }
 }

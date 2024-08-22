@@ -172,6 +172,36 @@ func my_function() {
   out(test);
 }
 my_function();
-        "#
+"#
+    );
+
+    nash_test!(
+        should_return_value_from_function,
+        r#"
+func my_function() {
+    return "value";
+}
+out(my_function());
+"#
+    );
+
+    nash_test!(
+        should_not_support_returning_from_nested_blocks,
+        r#"
+func my_function() {
+    if true {
+        return "value";
+    };
+}
+
+my_function();
+"#
+    );
+
+    nash_test!(
+        should_not_support_returning_from_root_block,
+        r#"
+return 123;
+"#
     );
 }

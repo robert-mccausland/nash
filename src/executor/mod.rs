@@ -10,7 +10,7 @@ use commands::CommandExecutor;
 use serde::Serialize;
 
 use crate::{
-    components::{function::Function, root::Root},
+    components::{function::Function, root::Root, statement::ControlFlowOptions},
     constants::UNDERSCORE,
     errors::ExecutionError,
     utils::formatting::fmt_collection,
@@ -349,7 +349,7 @@ impl ExecutorStack {
 
             // Would be nice to avoid cloning here - but would have to solve some mutability problems
             let function = function.clone();
-            function.code.execute_with_initializer(
+            let control_flow = function.code.execute_with_initializer(
                 |stack| {
                     for (value, name) in arguments.into_iter().zip(function.arguments) {
                         stack.declare_and_assign_variable(&name.value, value)?;
@@ -362,7 +362,10 @@ impl ExecutorStack {
             )?;
             self.scopes = outer_scope;
 
-            Value::Void
+            match control_flow {
+                None => Value::Void,
+                Some(ControlFlowOptions::Return(value)) => value,
+            }
         } else {
             builtins::call_builtin(function_name, &arguments, context)?
         };

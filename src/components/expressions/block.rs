@@ -29,7 +29,9 @@ impl Evaluatable for BlockExpression {
         stack: &mut crate::executor::ExecutorStack,
         context: &mut crate::executor::ExecutorContext,
     ) -> Result<crate::executor::Value, crate::ExecutionError> {
-        self.inner.execute(stack, context)?;
+        if let Some(_) = self.inner.execute(stack, context)? {
+            return Err("Flow control options not supported in block expressions".into());
+        }
         Ok(Value::Void)
     }
 }

@@ -59,7 +59,9 @@ impl Evaluatable for BranchExpression {
             let condition_result = condition.evaluate(stack, context)?;
             if let Value::Boolean(result) = condition_result {
                 if result {
-                    block.execute(stack, context)?;
+                    if let Some(_) = block.execute(stack, context)? {
+                        return Err("Control flow options not supported in if expressions".into());
+                    }
                     return Ok(Value::Void);
                 }
             } else {
@@ -68,7 +70,9 @@ impl Evaluatable for BranchExpression {
         }
 
         if let Some(default_block) = &self.default_block {
-            default_block.execute(stack, context)?;
+            if let Some(_) = default_block.execute(stack, context)? {
+                return Err("Control flow options not supported in if expressions".into());
+            }
         }
         return Ok(Value::Void);
     }

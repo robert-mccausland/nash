@@ -1,0 +1,11 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nfunc my_function() {\n    if true {\n        return \"value\";\n    };\n}\n\nmy_function();\n\"#)"
+---
+stdout: ""
+stderr: ""
+error:
+  ExecutionError:
+    message: Control flow options not supported in if expressions
+    call_stack:
+      - my_function

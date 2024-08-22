@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use crate::{
-    constants::VAR,
+    constants::{RETURN, VAR},
     executor::{ExecutorContext, ExecutorStack, Value},
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
@@ -20,6 +20,11 @@ pub enum Statement {
     DeclarationAssignment(Assignment, Expression),
     Assignment(Assignment, Expression),
     Expression(Expression),
+    Return(Expression),
+}
+
+pub enum ControlFlowOptions {
+    Return(Value),
 }
 
 impl Statement {
@@ -38,7 +43,7 @@ impl Statement {
         &self,
         stack: &mut ExecutorStack,
         context: &mut ExecutorContext,
-    ) -> Result<(), ExecutionError> {
+    ) -> Result<Option<ControlFlowOptions>, ExecutionError> {
         match self {
             Statement::Declaration(variable_name, type_definition) => {
                 stack.declare_variable(&variable_name.value, type_definition.value.clone())?;
@@ -92,9 +97,14 @@ impl Statement {
             Statement::Expression(expression) => {
                 expression.evaluate(stack, context)?;
             }
+            Statement::Return(expression) => {
+                return Ok(Some(ControlFlowOptions::Return(
+                    expression.evaluate(stack, context)?,
+                )));
+            }
         };
 
-        return Ok(());
+        return Ok(None);
     }
 
     fn parse_content<'a, I: Iterator<Item = &'a Token<'a>>>(
@@ -123,6 +133,11 @@ impl Statement {
                 Ok(Statement::Declaration((*value).into(), type_definition))
             };
         }
+
+        if let Some(TokenValue::Keyword(RETURN)) = next {
+            tokens.next();
+            return Ok(Statement::Return(Expression::parse(tokens)?));
+        };
 
         if let Some(assignment) = Assignment::try_parse(tokens) {
             return Ok(Statement::Assignment(

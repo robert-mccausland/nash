@@ -56,7 +56,9 @@ impl Root {
 
         stack.push_scope();
         for statement in &self.statements {
-            statement.execute(stack, context)?;
+            if let Some(_) = statement.execute(stack, context)? {
+                return Err("Control flow options are not allowed in the root block".into());
+            }
         }
         stack.pop_scope();
 

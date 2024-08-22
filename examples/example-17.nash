@@ -1,0 +1,9 @@
+#!/bin/nash
+
+# Function return
+
+func test() {
+  return "value";
+}
+
+out(test());
