@@ -51,6 +51,11 @@ impl Function {
                 tokens.next();
 
                 let argument_type = TypeDefinition::parse(tokens)?;
+
+                if argument_type.value == Type::Void {
+                    return Err("Function arguments must not have a type of void".into());
+                }
+
                 arguments.push(((*argument).into(), argument_type));
 
                 if let Some(TokenValue::RightBracket()) = tokens.peek_value() {

@@ -277,6 +277,10 @@ impl ExecutorStack {
         variable_name: &str,
         value_type: Type,
     ) -> Result<(), ExecutionError> {
+        if value_type == Type::Void {
+            return Err("Variables must not be declared with a type of void".into());
+        }
+
         if variable_name == UNDERSCORE {
             return Ok(());
         }

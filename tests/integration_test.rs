@@ -212,4 +212,26 @@ func test(arg: string) {}
 test(123);
 "#
     );
+
+    nash_test!(
+        should_error_when_assigning_void_to_a_variable,       
+        r#"
+func test() {}
+var my_variable = test();
+"#
+    );
+
+    nash_test!(
+        should_error_when_declaring_a_variable_of_type_void,       
+        r#"
+var test: void;
+"#
+    );
+
+    nash_test!(
+        should_error_when_creating_a_function_with_an_argument_of_void,       
+        r#"
+func test(arg: void) {}
+"#
+    );
 }

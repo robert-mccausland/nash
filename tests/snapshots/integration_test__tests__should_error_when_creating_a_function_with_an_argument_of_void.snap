@@ -1,0 +1,12 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nfunc test(arg: void) {}\n\"#)"
+---
+stdout: ""
+stderr: ""
+error:
+  ParserError:
+    message: Function arguments must not have a type of void
+    token: RightBracket
+    start: 20
+    end: 21
