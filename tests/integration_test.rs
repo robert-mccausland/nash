@@ -178,7 +178,7 @@ my_function();
     nash_test!(
         should_return_value_from_function,
         r#"
-func my_function() {
+func my_function(): string  {
     return "value";
 }
 out(my_function());
@@ -188,7 +188,7 @@ out(my_function());
     nash_test!(
         should_not_support_returning_from_nested_blocks,
         r#"
-func my_function() {
+func my_function(): string  {
     if true {
         return "value";
     };
@@ -202,6 +202,14 @@ my_function();
         should_not_support_returning_from_root_block,
         r#"
 return 123;
+"#
+    );
+
+    nash_test!(
+        should_error_when_function_called_with_argument_argument_of_wrong_type,
+        r#"
+func test(arg: string) {}
+test(123);
 "#
     );
 }

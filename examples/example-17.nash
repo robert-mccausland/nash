@@ -2,7 +2,7 @@
 
 # Function return
 
-func test() {
+func test(): string {
   return "value";
 }
 

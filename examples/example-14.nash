@@ -2,7 +2,7 @@
 
 # Recursion
 
-func recurse(index) {
+func recurse(index: integer) {
   {
     var index = fmt(index);
     out("iteration ${index}");

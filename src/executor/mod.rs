@@ -351,7 +351,17 @@ impl ExecutorStack {
             let function = function.clone();
             let control_flow = function.code.execute_with_initializer(
                 |stack| {
-                    for (value, name) in arguments.into_iter().zip(function.arguments) {
+                    for (value, (name, argument_type)) in
+                        arguments.into_iter().zip(function.arguments)
+                    {
+                        let value_type = value.get_type();
+                        if argument_type.value != value_type {
+                            return Err(format!(
+                                "Argument {} has type {} but got value with type {}",
+                                name.value, argument_type.value, value_type
+                            )
+                            .into());
+                        }
                         stack.declare_and_assign_variable(&name.value, value)?;
                     }
 
@@ -364,7 +374,17 @@ impl ExecutorStack {
 
             match control_flow {
                 None => Value::Void,
-                Some(ControlFlowOptions::Return(value)) => value,
+                Some(ControlFlowOptions::Return(value)) => {
+                    let value_type = value.get_type();
+                    if value_type != function.return_type.value {
+                        return Err(format!(
+                            "Function {} should return type {} but got value with type {}",
+                            function.name.value, function.return_type.value, value_type
+                        )
+                        .into());
+                    };
+                    value
+                }
             }
         } else {
             builtins::call_builtin(function_name, &arguments, context)?

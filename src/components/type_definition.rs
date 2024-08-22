@@ -74,3 +74,9 @@ impl TypeDefinition {
         return Err("Unable to parse type definition".into());
     }
 }
+
+impl From<Type> for TypeDefinition {
+    fn from(value: Type) -> Self {
+        TypeDefinition { value }
+    }
+}

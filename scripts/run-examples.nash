@@ -25,4 +25,6 @@ for script in glob("./examples/*.nash") {
 if len(failures) != 0 {
   out("Some scripts failed to execute!");
   out(fmt(failures));
+} else {
+  out("All scripts run successfully!");
 };

@@ -2,7 +2,7 @@
 
 # If else expressions
 
-func test(input) {
+func test(input: integer) {
   if input == 1 {
     out("one");
   } else if input == 2 {

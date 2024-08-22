@@ -2,7 +2,7 @@
 
 # Function arguments
 
-func function(one, two, three) {
+func function(one: string, two: string, three: string) {
   out("${one} ${two} ${three}");
 }
 

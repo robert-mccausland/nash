@@ -2,17 +2,21 @@ use serde::Serialize;
 
 use crate::{
     constants::FUNC,
+    executor::Type,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
 };
 
-use super::{block::Block, errors::ParserError, Identifier, Tokens};
+use super::{
+    block::Block, errors::ParserError, type_definition::TypeDefinition, Identifier, Tokens,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Function {
     pub name: Identifier,
-    pub arguments: Vec<Identifier>,
+    pub arguments: Vec<(Identifier, TypeDefinition)>,
     pub code: Block,
+    pub return_type: TypeDefinition,
 }
 
 impl Function {
@@ -41,7 +45,13 @@ impl Function {
                 };
                 tokens.next();
 
-                arguments.push((*argument).into());
+                let Some(TokenValue::Colon()) = tokens.peek_value() else {
+                    return Err("expected : after argument number".into());
+                };
+                tokens.next();
+
+                let argument_type = TypeDefinition::parse(tokens)?;
+                arguments.push(((*argument).into(), argument_type));
 
                 if let Some(TokenValue::RightBracket()) = tokens.peek_value() {
                     break;
@@ -53,14 +63,22 @@ impl Function {
                 }
             }
         }
-
         tokens.next_value();
+
+        let return_type = if let Some(TokenValue::Colon()) = tokens.peek_value() {
+            tokens.next();
+            TypeDefinition::parse(tokens)?
+        } else {
+            Type::Void.into()
+        };
+
         let code = Block::parse(tokens)?;
 
         return Ok(Some(Function {
             arguments,
             name: (*identifier).into(),
             code,
+            return_type,
         }));
     }
 }
