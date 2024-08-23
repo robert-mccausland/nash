@@ -1,7 +1,8 @@
 use serde::Serialize;
 
 use crate::{
-    components::{Evaluatable, Identifier, Tokens},
+    components::{Evaluatable, EvaluationResult, Identifier, Parsable, Tokens},
+    executor::{ExecutorContext, ExecutorStack, Value},
     lexer::TokenValue,
 };
 
@@ -13,7 +14,7 @@ pub struct VariableExpression {
     arguments: Option<Vec<Expression>>,
 }
 
-impl Evaluatable for VariableExpression {
+impl Parsable for VariableExpression {
     fn try_parse<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
         tokens: &mut crate::utils::iterators::Backtrackable<I>,
     ) -> Result<Option<Self>, crate::errors::ParserError> {
@@ -51,21 +52,25 @@ impl Evaluatable for VariableExpression {
 
         return Ok(None);
     }
+}
 
+impl Evaluatable for VariableExpression {
     fn evaluate(
         &self,
-        stack: &mut crate::executor::ExecutorStack,
-        context: &mut crate::executor::ExecutorContext,
-    ) -> Result<crate::executor::Value, crate::errors::ExecutionError> {
-        if let Some(arguments) = &self.arguments {
-            let arguments = arguments
-                .iter()
-                .map(|arg| arg.evaluate(stack, context))
-                .collect::<Result<Vec<_>, _>>()?;
+        stack: &mut ExecutorStack,
+        context: &mut ExecutorContext,
+    ) -> EvaluationResult<Value> {
+        Ok(if let Some(arguments) = &self.arguments {
+            let mut evaluated_arguments = Vec::new();
+            for argument in arguments {
+                evaluated_arguments.push(argument.evaluate(stack, context)?)
+            }
 
-            stack.execute_function(&self.name.value, arguments, context)
+            stack
+                .execute_function(&self.name.value, evaluated_arguments, context)?
+                .into()
         } else {
-            stack.resolve_variable(&self.name.value)
-        }
+            stack.resolve_variable(&self.name.value)?.into()
+        })
     }
 }

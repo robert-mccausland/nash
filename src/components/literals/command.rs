@@ -1,8 +1,7 @@
 use serde::Serialize;
 
 use crate::{
-    components::{errors::ParserError, Evaluatable, Tokens},
-    errors::ExecutionError,
+    components::{errors::ParserError, Evaluatable, EvaluationResult, Parsable, Tokens},
     executor::{commands::Command, ExecutorContext, ExecutorStack, Value},
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
@@ -63,7 +62,7 @@ impl<'a, I: IntoIterator<Item = &'a str>> From<I> for CommandLiteral {
     }
 }
 
-impl Evaluatable for CommandLiteral {
+impl Parsable for CommandLiteral {
     fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
         tokens: &mut Backtrackable<I>,
     ) -> Result<Option<Self>, ParserError> {
@@ -74,17 +73,21 @@ impl Evaluatable for CommandLiteral {
             None
         })
     }
+}
+
+impl Evaluatable for CommandLiteral {
     fn evaluate(
         &self,
         stack: &mut ExecutorStack,
         _context: &mut ExecutorContext,
-    ) -> Result<Value, ExecutionError> {
+    ) -> EvaluationResult<Value> {
         Ok(Value::Command(Command::new(
             self.command.resolve(stack)?,
             self.arguments
                 .iter()
                 .map(|argument| argument.resolve(stack))
                 .collect::<Result<Vec<_>, _>>()?,
-        )))
+        ))
+        .into())
     }
 }

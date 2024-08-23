@@ -12,10 +12,11 @@ mod loops;
 mod variable;
 
 use super::{
-    errors::{ExecutionError, ParserError},
+    block::Block,
+    errors::ParserError,
     literals::{BooleanLiteral, CommandLiteral, IntegerLiteral, StringLiteral},
     operator::Operator,
-    Tokens,
+    EvaluationResult, Tokens,
 };
 
 use block::BlockExpression;
@@ -56,13 +57,14 @@ impl Expression {
         &self,
         stack: &mut ExecutorStack,
         context: &mut ExecutorContext,
-    ) -> Result<Value, ExecutionError> {
+    ) -> EvaluationResult<Value> {
         let mut result = self.first.evaluate(stack, context)?;
+
         for (operator, expression) in &self.operations {
             let right = expression.evaluate(stack, context)?;
             result = operator.execute(result, right)?;
         }
-        return Ok(result);
+        return Ok(result.into());
     }
 }
 
@@ -106,8 +108,9 @@ impl BaseExpression {
         &self,
         stack: &mut ExecutorStack,
         context: &mut ExecutorContext,
-    ) -> Result<Value, ExecutionError> {
+    ) -> EvaluationResult<Value> {
         let value = self.content.evaluate(stack, context)?;
+
         if let Some(accessor) = self.accessor {
             let Value::Tuple(mut values) = value else {
                 return Err("Cannot use get expression on non-tuple value".into());
@@ -119,9 +122,9 @@ impl BaseExpression {
                 accessor, len
             ))?;
 
-            Ok(core::mem::take(result))
+            Ok(core::mem::take(result).into())
         } else {
-            Ok(value)
+            Ok(value.into())
         }
     }
 }
@@ -129,6 +132,7 @@ impl BaseExpression {
 macro_rules! expression_content {
     ([$($expression_type:ident,)*]) => {
         use crate::components::Evaluatable;
+        use crate::components::Parsable;
 
         #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
         enum ExpressionContent {
@@ -154,7 +158,7 @@ macro_rules! expression_content {
                 &self,
                 stack: &mut ExecutorStack,
                 context: &mut ExecutorContext,
-            ) -> Result<Value, ExecutionError> {
+            ) -> EvaluationResult<Value> {
                 match self {
                     $(
                         Self::$expression_type(value) => value.evaluate(stack, context),
@@ -173,9 +177,9 @@ expression_content!([
     ArrayExpression,
     TupleExpression,
     VariableExpression,
-    BranchExpression,
     ExecuteExpression,
-    ForLoopExpression,
     WhileLoopExpression,
+    ForLoopExpression,
+    BranchExpression,
     BlockExpression,
 ]);

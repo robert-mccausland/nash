@@ -186,7 +186,7 @@ out(my_function());
     );
 
     nash_test!(
-        should_not_support_returning_from_nested_blocks,
+        should_support_returning_from_nested_blocks,
         r#"
 func my_function(): string  {
     if true {
@@ -194,7 +194,7 @@ func my_function(): string  {
     };
 }
 
-my_function();
+out(my_function());
 "#
     );
 
@@ -214,7 +214,7 @@ test(123);
     );
 
     nash_test!(
-        should_error_when_assigning_void_to_a_variable,       
+        should_error_when_assigning_void_to_a_variable,
         r#"
 func test() {}
 var my_variable = test();
@@ -222,16 +222,56 @@ var my_variable = test();
     );
 
     nash_test!(
-        should_error_when_declaring_a_variable_of_type_void,       
+        should_error_when_declaring_a_variable_of_type_void,
         r#"
 var test: void;
 "#
     );
 
     nash_test!(
-        should_error_when_creating_a_function_with_an_argument_of_void,       
+        should_error_when_creating_a_function_with_an_argument_of_void,
         r#"
 func test(arg: void) {}
+"#
+    );
+
+    nash_test!(
+        should_break_from_while_loop,
+        r#"
+var index = 0;
+while true {
+  index = index + 1;
+  if index == 5 {
+    break;
+  };
+  out(fmt(index));
+};
+"#
+    );
+
+    nash_test!(
+        should_continue_in_while_loop,
+        r#"
+var index = 0;
+while index < 5 {
+    index = index + 1;
+    if index == 2 {
+      continue;
+    };
+    out(fmt(index));
+};
+"#
+    );
+
+    nash_test!(
+        should_break_in_for_loop,
+        r#"
+for item in [1, 2, 3, 4, 5] {
+    if item == 3 {
+      continue;
+    };
+    out(fmt(item));
+};
 "#
     );
 }

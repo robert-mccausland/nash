@@ -1,17 +1,15 @@
 use serde::Serialize;
 
 use crate::{
-    constants::{RETURN, VAR},
+    constants::{BREAK, CONTINUE, RETURN, VAR},
     executor::{ExecutorContext, ExecutorStack, Value},
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
 };
 
 use super::{
-    errors::{ExecutionError, ParserError},
-    expressions::Expression,
-    type_definition::TypeDefinition,
-    Identifier, Tokens,
+    errors::ParserError, expressions::Expression, type_definition::TypeDefinition,
+    EvaluationResult, Identifier, Tokens,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -21,10 +19,14 @@ pub enum Statement {
     Assignment(Assignment, Expression),
     Expression(Expression),
     Return(Expression),
+    Break(),
+    Continue(),
 }
 
 pub enum ControlFlowOptions {
     Return(Value),
+    Break(),
+    Continue(),
 }
 
 impl Statement {
@@ -43,7 +45,7 @@ impl Statement {
         &self,
         stack: &mut ExecutorStack,
         context: &mut ExecutorContext,
-    ) -> Result<Option<ControlFlowOptions>, ExecutionError> {
+    ) -> EvaluationResult<Value> {
         match self {
             Statement::Declaration(variable_name, type_definition) => {
                 stack.declare_variable(&variable_name.value, type_definition.value.clone())?;
@@ -98,13 +100,14 @@ impl Statement {
                 expression.evaluate(stack, context)?;
             }
             Statement::Return(expression) => {
-                return Ok(Some(ControlFlowOptions::Return(
-                    expression.evaluate(stack, context)?,
-                )));
+                let result = expression.evaluate(stack, context)?;
+                return Err(ControlFlowOptions::Return(result).into());
             }
+            Statement::Break() => return Err(ControlFlowOptions::Break().into()),
+            Statement::Continue() => return Err(ControlFlowOptions::Continue().into()),
         };
 
-        return Ok(None);
+        return Ok(Value::Void);
     }
 
     fn parse_content<'a, I: Iterator<Item = &'a Token<'a>>>(
@@ -137,6 +140,16 @@ impl Statement {
         if let Some(TokenValue::Keyword(RETURN)) = next {
             tokens.next();
             return Ok(Statement::Return(Expression::parse(tokens)?));
+        };
+
+        if let Some(TokenValue::Keyword(BREAK)) = next {
+            tokens.next();
+            return Ok(Statement::Break());
+        };
+
+        if let Some(TokenValue::Keyword(CONTINUE)) = next {
+            tokens.next();
+            return Ok(Statement::Continue());
         };
 
         if let Some(assignment) = Assignment::try_parse(tokens) {

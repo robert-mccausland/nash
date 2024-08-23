@@ -1,6 +1,6 @@
 use crate::{
     constants::{FALSE, TRUE},
-    errors::{ExecutionError, ParserError},
+    errors::ParserError,
     executor::{ExecutorContext, ExecutorStack, Value},
     lexer::{Token, TokenValue},
 };
@@ -12,7 +12,7 @@ pub use command::CommandLiteral;
 use serde::Serialize;
 pub use string::StringLiteral;
 
-use super::{Backtrackable, Evaluatable, Tokens};
+use super::{Backtrackable, Evaluatable, EvaluationResult, Parsable, Tokens};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct IntegerLiteral {
@@ -34,7 +34,7 @@ impl From<i32> for IntegerLiteral {
     }
 }
 
-impl Evaluatable for IntegerLiteral {
+impl Parsable for IntegerLiteral {
     fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
         tokens: &mut Backtrackable<I>,
     ) -> Result<Option<Self>, ParserError> {
@@ -47,13 +47,15 @@ impl Evaluatable for IntegerLiteral {
             },
         )
     }
+}
 
+impl Evaluatable for IntegerLiteral {
     fn evaluate(
         &self,
         _stack: &mut ExecutorStack,
         _context: &mut ExecutorContext,
-    ) -> Result<Value, ExecutionError> {
-        Ok(Value::Integer(self.value))
+    ) -> EvaluationResult<Value> {
+        Ok(Value::Integer(self.value).into())
     }
 }
 
@@ -67,8 +69,7 @@ impl From<bool> for BooleanLiteral {
         BooleanLiteral { value }
     }
 }
-
-impl Evaluatable for BooleanLiteral {
+impl Parsable for BooleanLiteral {
     fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
         tokens: &mut Backtrackable<I>,
     ) -> Result<Option<Self>, ParserError> {
@@ -84,11 +85,14 @@ impl Evaluatable for BooleanLiteral {
             },
         )
     }
+}
+
+impl Evaluatable for BooleanLiteral {
     fn evaluate(
         &self,
         _stack: &mut ExecutorStack,
         _context: &mut ExecutorContext,
-    ) -> Result<Value, ExecutionError> {
-        Ok(Value::Boolean(self.value))
+    ) -> EvaluationResult<Value> {
+        Ok(Value::Boolean(self.value).into())
     }
 }

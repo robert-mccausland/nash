@@ -1,0 +1,7 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nfor item in [1, 2, 3, 4, 5] {\n    if item == 3 {\n      continue;\n    };\n    out(fmt(item));\n};\n\"#)"
+---
+stdout: "1\n2\n4\n5\n"
+stderr: ""
+error: ~

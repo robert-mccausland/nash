@@ -1,15 +1,15 @@
 use serde::Serialize;
 
 use crate::{
-    executor::{ExecutorContext, ExecutorStack},
+    executor::{ExecutorContext, ExecutorStack, Value},
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
 };
 
 use super::{
     errors::{ExecutionError, ParserError},
-    statement::{ControlFlowOptions, Statement},
-    Tokens,
+    statement::Statement,
+    EvaluationResult, Tokens,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -43,7 +43,7 @@ impl Block {
         &self,
         stack: &mut ExecutorStack,
         context: &mut ExecutorContext,
-    ) -> Result<Option<ControlFlowOptions>, ExecutionError> {
+    ) -> EvaluationResult<Value> {
         self.execute_with_initializer(|_| Ok(()), stack, context)
     }
 
@@ -52,15 +52,13 @@ impl Block {
         initialize: F,
         stack: &mut ExecutorStack,
         context: &mut ExecutorContext,
-    ) -> Result<Option<ControlFlowOptions>, ExecutionError> {
+    ) -> EvaluationResult<Value> {
         stack.push_scope();
         initialize(stack)?;
         for statement in &self.statements {
-            if let Some(control_flow) = statement.execute(stack, context)? {
-                return Ok(Some(control_flow));
-            }
+            statement.execute(stack, context)?;
         }
         stack.pop_scope();
-        return Ok(None);
+        return Ok(Value::Void);
     }
 }

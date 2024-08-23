@@ -10,7 +10,7 @@ use super::{
     errors::{ExecutionError, ParserError},
     function::Function,
     statement::Statement,
-    Tokens,
+    EvaluationException, Tokens,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -56,8 +56,13 @@ impl Root {
 
         stack.push_scope();
         for statement in &self.statements {
-            if let Some(_) = statement.execute(stack, context)? {
-                return Err("Control flow options are not allowed in the root block".into());
+            if let Err(exception) = statement.execute(stack, context) {
+                return match exception {
+                    EvaluationException::AlterControlFlow(_) => {
+                        Err("Control flow options are not allowed in the root block".into())
+                    }
+                    EvaluationException::Error(err) => Err(err),
+                };
             }
         }
         stack.pop_scope();

@@ -1,13 +1,13 @@
 use serde::Serialize;
 
 use crate::{
-    components::{block::Block, Evaluatable, Tokens},
+    components::{expressions::Expression, Evaluatable, EvaluationResult, Parsable, Tokens},
     constants::{ELSE, IF},
-    executor::Value,
+    executor::{ExecutorContext, ExecutorStack, Value},
     lexer::TokenValue,
 };
 
-use super::Expression;
+use super::Block;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BranchExpression {
@@ -15,7 +15,7 @@ pub struct BranchExpression {
     default_block: Option<Block>,
 }
 
-impl Evaluatable for BranchExpression {
+impl Parsable for BranchExpression {
     fn try_parse<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
         tokens: &mut crate::utils::iterators::Backtrackable<I>,
     ) -> Result<Option<Self>, crate::errors::ParserError> {
@@ -49,20 +49,19 @@ impl Evaluatable for BranchExpression {
 
         return Ok(None);
     }
+}
 
+impl Evaluatable for BranchExpression {
     fn evaluate(
         &self,
-        stack: &mut crate::executor::ExecutorStack,
-        context: &mut crate::executor::ExecutorContext,
-    ) -> Result<crate::executor::Value, crate::errors::ExecutionError> {
+        stack: &mut ExecutorStack,
+        context: &mut ExecutorContext,
+    ) -> EvaluationResult<Value> {
         for (condition, block) in &self.conditional_blocks {
             let condition_result = condition.evaluate(stack, context)?;
             if let Value::Boolean(result) = condition_result {
                 if result {
-                    if let Some(_) = block.execute(stack, context)? {
-                        return Err("Control flow options not supported in if expressions".into());
-                    }
-                    return Ok(Value::Void);
+                    return Ok(block.execute(stack, context)?.into());
                 }
             } else {
                 return Err("If statement condition must evaluate to a boolean".into());
@@ -70,10 +69,9 @@ impl Evaluatable for BranchExpression {
         }
 
         if let Some(default_block) = &self.default_block {
-            if let Some(_) = default_block.execute(stack, context)? {
-                return Err("Control flow options not supported in if expressions".into());
-            }
+            Ok(default_block.execute(stack, context)?.into())
+        } else {
+            Ok(Value::Void.into())
         }
-        return Ok(Value::Void);
     }
 }

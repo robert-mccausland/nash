@@ -6,6 +6,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut executor = nash::Executor::default();
     nash::execute(&mut file, &mut executor)?;
+
     Ok(())
 }
 

@@ -1,9 +1,11 @@
 use serde::Serialize;
 
 use crate::{
-    components::{Evaluatable, Tokens},
-    executor::Value,
-    lexer::TokenValue,
+    components::{Evaluatable, EvaluationResult, Parsable, Tokens},
+    executor::{ExecutorContext, ExecutorStack, Value},
+    lexer::{Token, TokenValue},
+    utils::iterators::Backtrackable,
+    ParserError,
 };
 
 use super::Expression;
@@ -16,7 +18,7 @@ macro_rules! collection_expression_impl {
         }
 
         impl $expression_type {
-            fn try_parse<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
+            fn try_parse_impl<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
                 tokens: &mut crate::utils::iterators::Backtrackable<I>,
             ) -> Result<Option<Self>, crate::errors::ParserError> {
                 if let Some(values) = try_parse_collection(tokens, &$start_token, &$end_token)? {
@@ -61,13 +63,14 @@ fn try_parse_collection<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
 
 fn evaluate_collection(
     values: &Vec<Expression>,
-    stack: &mut crate::executor::ExecutorStack,
-    context: &mut crate::executor::ExecutorContext,
-) -> Result<Vec<crate::executor::Value>, crate::errors::ExecutionError> {
-    values
-        .iter()
-        .map(|expression| expression.evaluate(stack, context))
-        .collect::<Result<Vec<_>, _>>()
+    stack: &mut ExecutorStack,
+    context: &mut ExecutorContext,
+) -> EvaluationResult<Vec<Value>> {
+    let mut evaluated_values = Vec::new();
+    for value in values {
+        evaluated_values.push(value.evaluate(stack, context)?);
+    }
+    return Ok(evaluated_values.into());
 }
 
 collection_expression_impl!(
@@ -76,23 +79,21 @@ collection_expression_impl!(
     TokenValue::RightBracket()
 );
 
-impl Evaluatable for TupleExpression {
+impl Parsable for TupleExpression {
     fn try_parse<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
         tokens: &mut crate::utils::iterators::Backtrackable<I>,
     ) -> Result<Option<Self>, crate::errors::ParserError> {
-        TupleExpression::try_parse(tokens)
+        TupleExpression::try_parse_impl(tokens)
     }
+}
 
+impl Evaluatable for TupleExpression {
     fn evaluate(
         &self,
-        stack: &mut crate::executor::ExecutorStack,
-        context: &mut crate::executor::ExecutorContext,
-    ) -> Result<Value, crate::errors::ExecutionError> {
-        Ok(Value::Tuple(evaluate_collection(
-            &self.values,
-            stack,
-            context,
-        )?))
+        stack: &mut ExecutorStack,
+        context: &mut ExecutorContext,
+    ) -> EvaluationResult<Value> {
+        Ok(Value::Tuple(evaluate_collection(&self.values, stack, context)?).into())
     }
 }
 
@@ -102,18 +103,20 @@ collection_expression_impl!(
     TokenValue::RightSquare()
 );
 
-impl Evaluatable for ArrayExpression {
-    fn try_parse<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
-        tokens: &mut crate::utils::iterators::Backtrackable<I>,
-    ) -> Result<Option<Self>, crate::errors::ParserError> {
-        ArrayExpression::try_parse(tokens)
+impl Parsable for ArrayExpression {
+    fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
+        tokens: &mut Backtrackable<I>,
+    ) -> Result<Option<Self>, ParserError> {
+        ArrayExpression::try_parse_impl(tokens)
     }
+}
 
+impl Evaluatable for ArrayExpression {
     fn evaluate(
         &self,
-        stack: &mut crate::executor::ExecutorStack,
-        context: &mut crate::executor::ExecutorContext,
-    ) -> Result<Value, crate::errors::ExecutionError> {
+        stack: &mut ExecutorStack,
+        context: &mut ExecutorContext,
+    ) -> EvaluationResult<Value> {
         let values = evaluate_collection(&self.values, stack, context)?;
         let mut array_types = values.iter().map(|x| x.get_type());
         let Some(array_type) = array_types.next() else {
@@ -125,6 +128,6 @@ impl Evaluatable for ArrayExpression {
             }
         }
 
-        return Ok(Value::new_array(values, array_type)?);
+        return Ok(Value::new_array(values, array_type)?.into());
     }
 }

@@ -1,4 +1,5 @@
 use serde::Serialize;
+use statement::ControlFlowOptions;
 
 use crate::{
     errors::{self, ExecutionError, ParserError},
@@ -59,17 +60,41 @@ impl From<&str> for Identifier {
     }
 }
 
-trait Evaluatable
+trait Parsable
 where
     Self: Sized,
 {
     fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
         tokens: &mut Backtrackable<I>,
     ) -> Result<Option<Self>, ParserError>;
+}
 
+trait Evaluatable
+where
+    Self: Parsable,
+{
     fn evaluate(
         &self,
         stack: &mut ExecutorStack,
         context: &mut ExecutorContext,
-    ) -> Result<Value, ExecutionError>;
+    ) -> EvaluationResult<Value>;
+}
+
+type EvaluationResult<T> = Result<T, EvaluationException>;
+
+pub enum EvaluationException {
+    AlterControlFlow(ControlFlowOptions),
+    Error(ExecutionError),
+}
+
+impl From<ControlFlowOptions> for EvaluationException {
+    fn from(value: ControlFlowOptions) -> Self {
+        EvaluationException::AlterControlFlow(value.into())
+    }
+}
+
+impl<T: Into<ExecutionError>> From<T> for EvaluationException {
+    fn from(value: T) -> Self {
+        EvaluationException::Error(value.into())
+    }
 }

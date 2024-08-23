@@ -1,13 +1,18 @@
 use serde::Serialize;
 
 use crate::{
-    components::{block::Block, Evaluatable, Identifier, Tokens},
+    components::{
+        expressions::Expression, statement::ControlFlowOptions, Evaluatable, EvaluationException,
+        EvaluationResult, Identifier, Parsable, Tokens,
+    },
     constants::{FOR, IN, WHILE},
-    executor::Value,
-    lexer::TokenValue,
+    executor::{ExecutorContext, ExecutorStack, Value},
+    lexer::{Token, TokenValue},
+    utils::iterators::Backtrackable,
+    ParserError,
 };
 
-use super::Expression;
+use super::Block;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ForLoopExpression {
@@ -16,7 +21,7 @@ pub struct ForLoopExpression {
     loop_body: Block,
 }
 
-impl Evaluatable for ForLoopExpression {
+impl Parsable for ForLoopExpression {
     fn try_parse<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
         tokens: &mut crate::utils::iterators::Backtrackable<I>,
     ) -> Result<Option<Self>, crate::errors::ParserError> {
@@ -43,27 +48,40 @@ impl Evaluatable for ForLoopExpression {
 
         return Ok(None);
     }
+}
 
+impl Evaluatable for ForLoopExpression {
     fn evaluate(
         &self,
-        stack: &mut crate::executor::ExecutorStack,
-        context: &mut crate::executor::ExecutorContext,
-    ) -> Result<crate::executor::Value, crate::errors::ExecutionError> {
+        stack: &mut ExecutorStack,
+        context: &mut ExecutorContext,
+    ) -> EvaluationResult<Value> {
         let Value::Array(array, _) = self.array_expression.evaluate(stack, context)? else {
             return Err("for ... in loop must be used on an array value".into());
         };
 
         for item in array.as_ref().borrow().iter() {
-            if let Some(_) = self.loop_body.execute_with_initializer(
+            let result = self.loop_body.execute_with_initializer(
                 |stack| stack.declare_and_assign_variable(&self.item_name.value, item.clone()),
                 stack,
                 context,
-            )? {
-                return Err("Control flow options not supported in loops".into());
+            );
+
+            if let Err(EvaluationException::AlterControlFlow(ControlFlowOptions::Break())) = result
+            {
+                break;
             }
+
+            if let Err(EvaluationException::AlterControlFlow(ControlFlowOptions::Continue())) =
+                result
+            {
+                continue;
+            }
+
+            result?;
         }
 
-        Ok(Value::Void)
+        Ok(Value::Void.into())
     }
 }
 
@@ -73,10 +91,10 @@ pub struct WhileLoopExpression {
     loop_body: Block,
 }
 
-impl Evaluatable for WhileLoopExpression {
-    fn try_parse<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
-        tokens: &mut crate::utils::iterators::Backtrackable<I>,
-    ) -> Result<Option<Self>, crate::ParserError> {
+impl Parsable for WhileLoopExpression {
+    fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
+        tokens: &mut Backtrackable<I>,
+    ) -> Result<Option<Self>, ParserError> {
         if let Some(TokenValue::Keyword(WHILE)) = tokens.peek_value() {
             tokens.next();
 
@@ -91,12 +109,14 @@ impl Evaluatable for WhileLoopExpression {
 
         return Ok(None);
     }
+}
 
+impl Evaluatable for WhileLoopExpression {
     fn evaluate(
         &self,
-        stack: &mut crate::executor::ExecutorStack,
-        context: &mut crate::executor::ExecutorContext,
-    ) -> Result<Value, crate::ExecutionError> {
+        stack: &mut ExecutorStack,
+        context: &mut ExecutorContext,
+    ) -> EvaluationResult<Value> {
         loop {
             let Value::Boolean(check_result) = self.check_expression.evaluate(stack, context)?
             else {
@@ -104,12 +124,22 @@ impl Evaluatable for WhileLoopExpression {
             };
 
             if !check_result {
-                return Ok(Value::Void);
+                return Ok(Value::Void.into());
             }
 
-            if let Some(_) = self.loop_body.execute(stack, context)? {
-                return Err("Control flow options not supported in loops".into());
+            let result = self.loop_body.execute(stack, context);
+            if let Err(EvaluationException::AlterControlFlow(ControlFlowOptions::Break())) = result
+            {
+                return Ok(Value::Void.into());
             }
+
+            if let Err(EvaluationException::AlterControlFlow(ControlFlowOptions::Continue())) =
+                result
+            {
+                continue;
+            }
+
+            result?;
         }
     }
 }

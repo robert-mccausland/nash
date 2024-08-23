@@ -10,7 +10,9 @@ use commands::CommandExecutor;
 use serde::Serialize;
 
 use crate::{
-    components::{function::Function, root::Root, statement::ControlFlowOptions},
+    components::{
+        function::Function, root::Root, statement::ControlFlowOptions, EvaluationException,
+    },
     constants::UNDERSCORE,
     errors::ExecutionError,
     utils::formatting::fmt_collection,
@@ -353,7 +355,7 @@ impl ExecutorStack {
 
             // Would be nice to avoid cloning here - but would have to solve some mutability problems
             let function = function.clone();
-            let control_flow = function.code.execute_with_initializer(
+            let result = function.code.execute_with_initializer(
                 |stack| {
                     for (value, (name, argument_type)) in
                         arguments.into_iter().zip(function.arguments)
@@ -373,23 +375,32 @@ impl ExecutorStack {
                 },
                 self,
                 context,
-            )?;
-            self.scopes = outer_scope;
+            );
 
-            match control_flow {
-                None => Value::Void,
-                Some(ControlFlowOptions::Return(value)) => {
-                    let value_type = value.get_type();
-                    if value_type != function.return_type.value {
-                        return Err(format!(
-                            "Function {} should return type {} but got value with type {}",
-                            function.name.value, function.return_type.value, value_type
-                        )
-                        .into());
-                    };
-                    value
+            self.scopes = outer_scope;
+            let result = if let Err(exception) = result {
+                match exception {
+                    EvaluationException::AlterControlFlow(ControlFlowOptions::Return(value)) => {
+                        value
+                    }
+                    EvaluationException::AlterControlFlow(_) => {
+                        return Err("Control flow option not supported in this context".into())
+                    }
+                    EvaluationException::Error(err) => return Err(err),
                 }
-            }
+            } else {
+                Value::Void
+            };
+
+            let value_type = result.get_type();
+            if value_type != function.return_type.value {
+                return Err(format!(
+                    "Function {} should return type {} but got value with type {}",
+                    function.name.value, function.return_type.value, value_type
+                )
+                .into());
+            };
+            return Ok(result);
         } else {
             builtins::call_builtin(function_name, &arguments, context)?
         };

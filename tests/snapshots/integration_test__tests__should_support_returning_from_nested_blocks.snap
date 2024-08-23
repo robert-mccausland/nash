@@ -1,0 +1,7 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nfunc my_function(): string  {\n    if true {\n        return \"value\";\n    };\n}\n\nout(my_function());\n\"#)"
+---
+stdout: "value\n"
+stderr: ""
+error: ~

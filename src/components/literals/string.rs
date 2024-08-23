@@ -4,7 +4,7 @@ use unicode_segmentation::UnicodeSegmentation;
 use crate::{
     components::{
         errors::{ExecutionError, ParserError},
-        Evaluatable, Identifier, Tokens,
+        Evaluatable, EvaluationResult, Identifier, Parsable, Tokens,
     },
     executor::{ExecutorContext, ExecutorStack, Value},
     lexer::{Token, TokenValue},
@@ -80,7 +80,7 @@ impl From<&str> for StringLiteral {
     }
 }
 
-impl Evaluatable for StringLiteral {
+impl Parsable for StringLiteral {
     fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
         tokens: &mut Backtrackable<I>,
     ) -> Result<Option<Self>, ParserError> {
@@ -93,13 +93,15 @@ impl Evaluatable for StringLiteral {
             },
         )
     }
+}
 
+impl Evaluatable for StringLiteral {
     fn evaluate(
         &self,
         stack: &mut ExecutorStack,
         _context: &mut ExecutorContext,
-    ) -> Result<Value, ExecutionError> {
-        Ok(Value::String(self.resolve(stack)?))
+    ) -> EvaluationResult<Value> {
+        Ok(Value::String(self.resolve(stack)?).into())
     }
 }
 

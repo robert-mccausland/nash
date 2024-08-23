@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use crate::{
-    components::{Evaluatable, Identifier, Tokens},
+    components::{Evaluatable, EvaluationResult, Identifier, Parsable, Tokens},
     constants::{EXEC, VAR},
     errors::ExecutionError,
     executor::{commands::StatusCode, Value},
@@ -16,7 +16,7 @@ pub struct ExecuteExpression {
     capture_exit_code: Option<CaptureExitCode>,
 }
 
-impl Evaluatable for ExecuteExpression {
+impl Parsable for ExecuteExpression {
     fn try_parse<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
         tokens: &mut crate::utils::iterators::Backtrackable<I>,
     ) -> Result<Option<Self>, crate::errors::ParserError> {
@@ -48,12 +48,14 @@ impl Evaluatable for ExecuteExpression {
 
         return Ok(None);
     }
+}
 
+impl Evaluatable for ExecuteExpression {
     fn evaluate(
         &self,
         stack: &mut crate::executor::ExecutorStack,
         context: &mut crate::executor::ExecutorContext,
-    ) -> Result<crate::executor::Value, crate::errors::ExecutionError> {
+    ) -> EvaluationResult<Value> {
         if let Value::Command(command) = self.inner.evaluate(stack, context)? {
             let result = context
                 .command_executor
@@ -94,7 +96,7 @@ impl Evaluatable for ExecuteExpression {
                 }
             }
 
-            return Ok(return_value);
+            return Ok(return_value.into());
         }
 
         return Err("Value being executed must be a command".into());

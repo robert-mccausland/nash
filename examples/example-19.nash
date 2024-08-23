@@ -1,0 +1,29 @@
+#!/bin/nash
+
+# Break and Continue
+
+var data = [1, 2, 3, 4, 5];
+
+for value in data {
+  if value == 3 {
+    continue;
+  };
+
+  out(fmt(value));
+};
+
+out("Done for loop!");
+out("");
+
+var index = 0;
+while true {
+  index = index + 1;
+
+  if index > 3 {
+    break;
+  };
+
+  out(fmt(index));
+};
+
+out("Done while loop!");
