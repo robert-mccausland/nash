@@ -1,0 +1,10 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\n{\n  continue;\n};\n\"#)"
+---
+stdout: ""
+stderr: ""
+error:
+  ExecutionError:
+    message: Control flow options are not allowed in the root block
+    call_stack: []

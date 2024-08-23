@@ -274,4 +274,47 @@ for item in [1, 2, 3, 4, 5] {
 };
 "#
     );
+
+    nash_test!(
+        should_error_if_break_called_directly_from_root,
+        r#"
+if true {
+  break;
+};
+"#
+    );
+
+    nash_test!(
+        should_error_if_continue_called_directly_from_root,
+        r#"
+{
+  continue;
+};
+"#
+    );
+
+    nash_test!(
+        should_error_if_break_called_directly_from_function,
+        r#"
+func main() {
+  if false {
+  } else {
+    break;
+  };
+}
+
+main();
+"#
+    );
+
+    nash_test!(
+        should_error_if_continue_called_directly_from_function,
+        r#"
+func main() {
+  continue;
+}
+
+main();
+"#
+    );
 }

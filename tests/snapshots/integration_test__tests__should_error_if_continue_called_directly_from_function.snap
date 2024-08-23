@@ -1,0 +1,11 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nfunc main() {\n  continue;\n}\n\nmain();\n\"#)"
+---
+stdout: ""
+stderr: ""
+error:
+  ExecutionError:
+    message: Control flow option not supported in this context
+    call_stack:
+      - main
