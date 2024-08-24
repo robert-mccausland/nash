@@ -4,8 +4,9 @@ use serde::Serialize;
 use unicode_segmentation::{GraphemeIndices, UnicodeSegmentation};
 
 use crate::errors::LexerError;
+pub use tokens::TokenValue;
 
-mod token_kinds;
+mod tokens;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Token<'a> {
@@ -20,38 +21,11 @@ impl<'a> Token<'a> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub enum TokenValue<'a> {
-    StringLiteral(&'a str),
-    IntegerLiteral(&'a str),
-    Identifier(&'a str),
-    Keyword(&'a str),
-    Equals(),
-    Plus(),
-    LeftBracket(),
-    RightBracket(),
-    LeftCurly(),
-    RightCurly(),
-    LeftAngle(),
-    RightAngle(),
-    LeftSquare(),
-    RightSquare(),
-    Question(),
-    Dot(),
-    Colon(),
-    Semicolon(),
-    DoubleQuote(),
-    Comma(),
-    Dollar(),
-    Bang(),
-    Backtick(),
-}
-
 #[derive(Debug, PartialEq, Eq)]
 enum LexerContext {
     Root,
     Comment,
-    String,
+    String(bool),
     Command,
     TemplateVariable,
 }
@@ -112,31 +86,38 @@ impl<'a> Tokens<'a> {
         loop {
             let value = &self.buffer[start..end];
 
-            // Try to parse the next token, returning the previously parsed token if we can't parse
-            // it this time.
-            let Some(new_result) = token_kinds::try_get_token_kind(&mut self.context_stack, value)
-            else {
-                return match result {
-                    Some(result) => Ok(result),
-                    None => Err("Could not parse token.".into()),
-                };
+            // Try to parse the next token
+            match tokens::try_get_token(&mut self.context_stack, value) {
+                tokens::GetTokenResult::Match(token_kind) => {
+                    self.iterator.next();
+
+                    let token = token_kind.into_token(value);
+                    if token_kind.is_greedy() {
+                        result = Some(token);
+                    } else {
+                        return Ok(Some(Token::new(token, start, end)));
+                    }
+                }
+                tokens::GetTokenResult::NoMatch() => {
+                    return match result {
+                        Some(token) => Ok(Some(Token::new(token, start, end - self.next.1.len()))),
+                        None => Err("Unable to match token".into()),
+                    }
+                }
+                tokens::GetTokenResult::Skip() => {
+                    self.iterator.next();
+                    return Ok(None);
+                }
             };
 
-            result = Some(
-                new_result
-                    .into_token(&value)
-                    .map(|value| Token::new(value, start, end)),
-            );
-
-            // Advance though the file if we did successfully parse the previous token to see if
-            // the next character also makes a valid token.
-            self.iterator.next();
+            // If we need to get more tokens then match more
             let Some(next) = self.iterator.peek() else {
                 return match result {
-                    Some(result) => Ok(result),
+                    Some(token) => Ok(Some(Token::new(token, start, end))),
                     None => Err("Unexpected end of file.".into()),
                 };
             };
+
             self.next = *next;
             end += self.next.1.len();
         }

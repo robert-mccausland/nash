@@ -4,14 +4,14 @@ macro_rules! define_keywords {
             pub const $name: &str = $value;
         )*
 
-        pub const KEYWORDS: [&str; count_identifiers!($($name,)*)] = [
+        pub const KEYWORDS: [&str; count!($($name,)*)] = [
             $($name),*
         ];
     }
 }
 
-macro_rules! count_identifiers {
-    ($first:ident, $($rest:ident, )*) => (1usize + count_identifiers!($($rest,)*));
+macro_rules! count {
+    ($first:tt, $($rest:tt, )*) => (1usize + count!($($rest,)*));
     () => (0usize);
 }
 
