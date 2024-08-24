@@ -4,9 +4,11 @@ use crate::constants::KEYWORDS;
 
 use super::LexerContext;
 
-const SEMICOLON: &str = ";";
-const COMMA: &str = ",";
 const HASH: &str = "#";
+const BACKSLASH: &str = "\\";
+const NEWLINES: [&str; 2] = ["\n", "\r\n"];
+const DOUBLE_QUOTE: &str = "\"";
+const BACKTICK: &str = "`";
 const EQUALS: &str = "=";
 const PLUS: &str = "+";
 const LEFT_BRACKET: &str = "(";
@@ -20,105 +22,94 @@ const RIGHT_SQUARE: &str = "]";
 const QUESTION: &str = "?";
 const DOT: &str = ".";
 const COLON: &str = ":";
-const DOLLAR: &str = "$";
+const SEMICOLON: &str = ";";
+const COMMA: &str = ",";
 const BANG: &str = "!";
-const BACKSLASH: &str = "\\";
-const DOUBLE_QUOTE: &str = "\"";
-const BACKTICK: &str = "`";
-const NEWLINES: [&str; 2] = ["\n", "\r\n"];
+const DOLLAR: &str = "$";
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TokenKind {
+macro_rules! define_tokens {
+    {complex => [$($complex_name:ident,)*], simple => [$($simple_value:ident => $simple_name:ident,)*]} => {
+      #[derive(Debug, Clone, PartialEq, Eq)]
+      pub enum TokenKind {
+        $(
+          $complex_name,
+        )*
+        $(
+          $simple_name,
+        )*
+      }
+
+      impl TokenKind {
+        pub fn into_token<'a>(&self, value: &'a str) -> TokenValue<'a> {
+          match self {
+            $(
+              Self::$complex_name => TokenValue::$complex_name(value),
+            )*
+            $(
+              Self::$simple_name => TokenValue::$simple_name(),
+            )*
+          }
+        }
+
+        pub fn is_greedy(&self) -> bool {
+          match self {
+            $(
+              Self::$complex_name => true,
+            )*
+            _ => false,
+          }
+        }
+
+        pub fn match_simple_token(value: &str) -> Option<Self> {
+          match value {
+            $(
+              $simple_value => Some(Self::$simple_name),
+            )*
+            _ => None,
+          }
+        }
+      }
+
+      #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+      pub enum TokenValue<'a> {
+        $(
+          $complex_name(&'a str),
+        )*
+        $(
+          $simple_name(),
+        )*
+      }
+    };
+}
+
+define_tokens! {
+  complex => [
     StringLiteral,
     IntegerLiteral,
     Identifier,
     Keyword,
-    Equals,
-    Plus,
-    LeftBracket,
-    RightBracket,
-    LeftCurly,
-    RightCurly,
-    LeftAngle,
-    RightAngle,
-    LeftSquare,
-    RightSquare,
-    Question,
-    Dot,
-    Colon,
-    Semicolon,
-    Comma,
-    Bang,
-    DoubleQuote,
-    Dollar,
-    Backtick,
-}
-
-impl TokenKind {
-    pub fn into_token<'a>(&self, value: &'a str) -> TokenValue<'a> {
-        match self {
-            TokenKind::StringLiteral => TokenValue::StringLiteral(value),
-            TokenKind::IntegerLiteral => TokenValue::IntegerLiteral(value),
-            TokenKind::Identifier => TokenValue::Identifier(value),
-            TokenKind::Keyword => TokenValue::Keyword(value),
-            TokenKind::Equals => TokenValue::Equals(),
-            TokenKind::Plus => TokenValue::Plus(),
-            TokenKind::LeftBracket => TokenValue::LeftBracket(),
-            TokenKind::RightBracket => TokenValue::RightBracket(),
-            TokenKind::LeftCurly => TokenValue::LeftCurly(),
-            TokenKind::RightCurly => TokenValue::RightCurly(),
-            TokenKind::LeftAngle => TokenValue::LeftAngle(),
-            TokenKind::RightAngle => TokenValue::RightAngle(),
-            TokenKind::LeftSquare => TokenValue::LeftSquare(),
-            TokenKind::RightSquare => TokenValue::RightSquare(),
-            TokenKind::Question => TokenValue::Question(),
-            TokenKind::Dot => TokenValue::Dot(),
-            TokenKind::Colon => TokenValue::Colon(),
-            TokenKind::Semicolon => TokenValue::Semicolon(),
-            TokenKind::Comma => TokenValue::Comma(),
-            TokenKind::Bang => TokenValue::Bang(),
-            TokenKind::DoubleQuote => TokenValue::DoubleQuote(),
-            TokenKind::Dollar => TokenValue::Dollar(),
-            TokenKind::Backtick => TokenValue::Backtick(),
-        }
-    }
-
-    pub fn is_greedy(&self) -> bool {
-        match self {
-            TokenKind::StringLiteral => true,
-            TokenKind::IntegerLiteral => true,
-            TokenKind::Identifier => true,
-            TokenKind::Keyword => true,
-            _ => false,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub enum TokenValue<'a> {
-    StringLiteral(&'a str),
-    IntegerLiteral(&'a str),
-    Identifier(&'a str),
-    Keyword(&'a str),
-    Equals(),
-    Plus(),
-    LeftBracket(),
-    RightBracket(),
-    LeftCurly(),
-    RightCurly(),
-    LeftAngle(),
-    RightAngle(),
-    LeftSquare(),
-    RightSquare(),
-    Question(),
-    Dot(),
-    Colon(),
-    Semicolon(),
-    DoubleQuote(),
-    Comma(),
-    Dollar(),
-    Bang(),
-    Backtick(),
+  ],
+  simple => [
+    DOUBLE_QUOTE => DoubleQuote,
+    BACKTICK => Backtick,
+    EQUALS => Equals,
+    PLUS => Plus,
+    LEFT_BRACKET => LeftBracket,
+    RIGHT_BRACKET => RightBracket,
+    LEFT_CURLY => LeftCurly,
+    RIGHT_CURLY => RightCurly,
+    LEFT_ANGLE => LeftAngle,
+    RIGHT_ANGLE => RightAngle,
+    LEFT_SQUARE => LeftSquare,
+    RIGHT_SQUARE => RightSquare,
+    QUESTION => Question,
+    DOT => Dot,
+    COLON => Colon,
+    SEMICOLON => Semicolon,
+    COMMA => Comma,
+    BANG => Bang,
+    DOLLAR => Dollar,
+  ]
 }
 
 pub enum GetTokenResult {
@@ -132,6 +123,12 @@ pub enum GetTokenResult {
     Skip(),
 }
 
+impl From<TokenKind> for GetTokenResult {
+    fn from(value: TokenKind) -> Self {
+        Self::Match(value)
+    }
+}
+
 pub fn try_get_token(context_stack: &mut Vec<LexerContext>, current: &str) -> GetTokenResult {
     match context_stack.last_mut().unwrap() {
         LexerContext::Root => match current {
@@ -141,35 +138,21 @@ pub fn try_get_token(context_stack: &mut Vec<LexerContext>, current: &str) -> Ge
             }
             DOUBLE_QUOTE => {
                 context_stack.push(LexerContext::String(false));
-                GetTokenResult::Match(TokenKind::DoubleQuote)
+                TokenKind::DoubleQuote.into()
             }
             BACKTICK => {
                 context_stack.push(LexerContext::Command);
-                GetTokenResult::Match(TokenKind::Backtick)
+                TokenKind::Backtick.into()
             }
-            EQUALS => GetTokenResult::Match(TokenKind::Equals),
-            PLUS => GetTokenResult::Match(TokenKind::Plus),
-            LEFT_BRACKET => GetTokenResult::Match(TokenKind::LeftBracket),
-            RIGHT_BRACKET => GetTokenResult::Match(TokenKind::RightBracket),
-            LEFT_CURLY => GetTokenResult::Match(TokenKind::LeftCurly),
-            RIGHT_CURLY => GetTokenResult::Match(TokenKind::RightCurly),
-            LEFT_ANGLE => GetTokenResult::Match(TokenKind::LeftAngle),
-            RIGHT_ANGLE => GetTokenResult::Match(TokenKind::RightAngle),
-            LEFT_SQUARE => GetTokenResult::Match(TokenKind::LeftSquare),
-            RIGHT_SQUARE => GetTokenResult::Match(TokenKind::RightSquare),
-            QUESTION => GetTokenResult::Match(TokenKind::Question),
-            DOT => GetTokenResult::Match(TokenKind::Dot),
-            COLON => GetTokenResult::Match(TokenKind::Colon),
-            SEMICOLON => GetTokenResult::Match(TokenKind::Semicolon),
-            COMMA => GetTokenResult::Match(TokenKind::Comma),
-            BANG => GetTokenResult::Match(TokenKind::Bang),
             _ => {
-                if KEYWORDS.contains(&current) {
-                    GetTokenResult::Match(TokenKind::Keyword)
+                if let Some(value) = TokenKind::match_simple_token(current) {
+                    value.into()
+                } else if KEYWORDS.contains(&current) {
+                    TokenKind::Keyword.into()
                 } else if matches_number(current) {
-                    GetTokenResult::Match(TokenKind::IntegerLiteral)
+                    TokenKind::IntegerLiteral.into()
                 } else if matches_identifier(current) {
-                    GetTokenResult::Match(TokenKind::Identifier)
+                    TokenKind::Identifier.into()
                 } else if is_whitespace(current) {
                     GetTokenResult::Skip()
                 } else {
@@ -186,32 +169,32 @@ pub fn try_get_token(context_stack: &mut Vec<LexerContext>, current: &str) -> Ge
         LexerContext::String(is_escaped) => {
             if *is_escaped {
                 *is_escaped = false;
-                GetTokenResult::Match(TokenKind::StringLiteral)
+                TokenKind::StringLiteral.into()
             } else if current.ends_with(BACKSLASH) {
                 *is_escaped = true;
-                GetTokenResult::Match(TokenKind::StringLiteral)
+                TokenKind::StringLiteral.into()
             } else if current == DOUBLE_QUOTE {
                 // Single double quote will happen when we are at the end of a string
                 context_stack.pop();
-                GetTokenResult::Match(TokenKind::DoubleQuote)
+                TokenKind::DoubleQuote.into()
             } else if current == DOLLAR {
                 // Single dollar will happen when we are at the start of a template variable
                 context_stack.push(LexerContext::TemplateVariable);
-                GetTokenResult::Match(TokenKind::Dollar)
+                TokenKind::Dollar.into()
             } else if current.ends_with(DOUBLE_QUOTE) || current.ends_with(DOLLAR) {
                 // Return no match if we encounter something indicates the literal should end
                 GetTokenResult::NoMatch()
             } else {
-                GetTokenResult::Match(TokenKind::StringLiteral)
+                TokenKind::StringLiteral.into()
             }
         }
         LexerContext::Command => {
             if current == DOUBLE_QUOTE {
                 context_stack.push(LexerContext::String(false));
-                GetTokenResult::Match(TokenKind::DoubleQuote)
+                TokenKind::DoubleQuote.into()
             } else if current == BACKTICK {
                 context_stack.pop();
-                GetTokenResult::Match(TokenKind::Backtick)
+                TokenKind::Backtick.into()
             } else if is_whitespace(current) {
                 GetTokenResult::Skip()
             } else if current.ends_with(BACKTICK)
@@ -220,17 +203,17 @@ pub fn try_get_token(context_stack: &mut Vec<LexerContext>, current: &str) -> Ge
             {
                 GetTokenResult::NoMatch()
             } else {
-                GetTokenResult::Match(TokenKind::StringLiteral)
+                TokenKind::StringLiteral.into()
             }
         }
         LexerContext::TemplateVariable => {
             if current == LEFT_CURLY {
-                GetTokenResult::Match(TokenKind::LeftCurly)
+                TokenKind::LeftCurly.into()
             } else if current == RIGHT_CURLY {
                 context_stack.pop();
-                GetTokenResult::Match(TokenKind::RightCurly)
+                TokenKind::RightCurly.into()
             } else if matches_identifier(current) {
-                GetTokenResult::Match(TokenKind::Identifier)
+                TokenKind::Identifier.into()
             } else if is_whitespace(current) {
                 GetTokenResult::Skip()
             } else {

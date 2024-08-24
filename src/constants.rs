@@ -15,7 +15,6 @@ macro_rules! count {
     () => (0usize);
 }
 
-// Not a keyword, but it is a special identifier
 pub const UNDERSCORE: &str = "_";
 
 define_keywords!(
