@@ -1,20 +1,18 @@
 macro_rules! define_keywords {
     ($($name:ident => $value:expr),*) => {
-        pub const KEYWORDS: [&str; count_identifiers!($($name),*)] = [
-            $($value),*
-        ];
-
         $(
             pub const $name: &str = $value;
         )*
+
+        pub const KEYWORDS: [&str; count_identifiers!($($name,)*)] = [
+            $($name),*
+        ];
     }
 }
 
 macro_rules! count_identifiers {
-    ($($identifiers:ident),*) => {
-        <[()]>::len(&[$(count_identifiers!(@replace $identifiers)),*])
-    };
-    (@replace $identifiers:ident) => { () };
+    ($first:ident, $($rest:ident, )*) => (1usize + count_identifiers!($($rest,)*));
+    () => (0usize);
 }
 
 // Not a keyword, but it is a special identifier
