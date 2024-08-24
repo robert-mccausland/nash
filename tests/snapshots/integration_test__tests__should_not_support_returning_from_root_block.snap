@@ -6,6 +6,6 @@ stdout: ""
 stderr: ""
 error:
   ExecutionError:
-    message: Control flow options are not allowed in the root block
+    message: Return must be used in a function block
     call_stack: []
 exit_code: 103

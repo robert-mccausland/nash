@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use crate::{
-    components::{function::Function, statement::ControlFlowOptions, EvaluationException},
+    components::{
+        function::Function, statement::ControlFlowOptions, EvaluationException, EvaluationResult,
+    },
     constants::UNDERSCORE,
     ExecutionError,
 };
@@ -131,7 +133,7 @@ impl ExecutorStack {
         instance: Option<Value>,
         arguments: Vec<Value>,
         context: &mut ExecutorContext,
-    ) -> Result<Value, ExecutionError> {
+    ) -> EvaluationResult<Value> {
         if self.call_stack.len() >= context.options.max_call_stack_depth {
             return Err(format!(
                 "Call stack depth limit of {} exceeded",
@@ -158,7 +160,7 @@ impl ExecutorStack {
         function: Function,
         arguments: Vec<Value>,
         context: &mut ExecutorContext,
-    ) -> Result<Value, ExecutionError> {
+    ) -> EvaluationResult<Value> {
         if function.arguments.len() != arguments.len() {
             return Err(format!(
                 "Function {} requires {} arguments, but {} were provided",
@@ -198,10 +200,13 @@ impl ExecutorStack {
         let result = if let Err(exception) = result {
             match exception {
                 EvaluationException::AlterControlFlow(ControlFlowOptions::Return(value)) => value,
-                EvaluationException::AlterControlFlow(_) => {
-                    return Err("Control flow option not supported in this context".into())
+                EvaluationException::AlterControlFlow(ControlFlowOptions::Break()) => {
+                    return Err("Break must be used in a loop block".into())
                 }
-                EvaluationException::Error(err) => return Err(err),
+                EvaluationException::AlterControlFlow(ControlFlowOptions::Continue()) => {
+                    return Err("Continue must be used in a loop block".into())
+                }
+                err => return Err(err),
             }
         } else {
             Value::Void

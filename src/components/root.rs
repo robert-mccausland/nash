@@ -9,7 +9,7 @@ use crate::{
 use super::{
     errors::{ExecutionError, ParserError},
     function::Function,
-    statement::Statement,
+    statement::{ControlFlowOptions, Statement},
     EvaluationException, Tokens,
 };
 
@@ -55,18 +55,29 @@ impl Root {
         }
 
         stack.push_scope();
+        let mut exit_code = 0;
         for statement in &self.statements {
             if let Err(exception) = statement.execute(stack, context) {
-                return match exception {
-                    EvaluationException::AlterControlFlow(_) => {
-                        Err("Control flow options are not allowed in the root block".into())
+                match exception {
+                    EvaluationException::AlterControlFlow(ControlFlowOptions::Exit(value)) => {
+                        exit_code = value;
+                        break;
                     }
-                    EvaluationException::Error(err) => Err(err),
+                    EvaluationException::AlterControlFlow(ControlFlowOptions::Return(_)) => {
+                        return Err("Return must be used in a function block".into())
+                    }
+                    EvaluationException::AlterControlFlow(ControlFlowOptions::Break()) => {
+                        return Err("Break must be used in a loop block".into())
+                    }
+                    EvaluationException::AlterControlFlow(ControlFlowOptions::Continue()) => {
+                        return Err("Continue must be used in a loop block".into())
+                    }
+                    EvaluationException::Error(err) => return Err(err),
                 };
             }
         }
         stack.pop_scope();
 
-        return Ok(0);
+        return Ok(exit_code);
     }
 }

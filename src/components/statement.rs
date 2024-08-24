@@ -1,10 +1,11 @@
 use serde::Serialize;
 
 use crate::{
-    constants::{BREAK, CONTINUE, RETURN, VAR},
+    constants::{BREAK, CONTINUE, EXIT, RETURN, VAR},
     executor::{ExecutorContext, ExecutorStack, Value},
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
+    ExecutionError,
 };
 
 use super::{
@@ -18,12 +19,14 @@ pub enum Statement {
     DeclarationAssignment(Assignment, Expression),
     Assignment(Assignment, Expression),
     Expression(Expression),
+    Exit(Expression),
     Return(Expression),
     Break(),
     Continue(),
 }
 
 pub enum ControlFlowOptions {
+    Exit(u8),
     Return(Value),
     Break(),
     Continue(),
@@ -103,6 +106,17 @@ impl Statement {
                 let result = expression.evaluate(stack, context)?;
                 return Err(ControlFlowOptions::Return(result).into());
             }
+            Statement::Exit(expression) => {
+                let Value::Integer(value) = expression.evaluate(stack, context)? else {
+                    return Err("exit statement must be provided with an integer value".into());
+                };
+
+                let exit_code = value.try_into().map_err::<ExecutionError, _>(|_| {
+                    format!("exit code must be between 0 and 255, but got {value}").into()
+                })?;
+
+                return Err(ControlFlowOptions::Exit(exit_code).into());
+            }
             Statement::Break() => return Err(ControlFlowOptions::Break().into()),
             Statement::Continue() => return Err(ControlFlowOptions::Continue().into()),
         };
@@ -136,6 +150,11 @@ impl Statement {
                 Ok(Statement::Declaration((*value).into(), type_definition))
             };
         }
+
+        if let Some(TokenValue::Keyword(EXIT)) = next {
+            tokens.next();
+            return Ok(Statement::Exit(Expression::parse(tokens)?));
+        };
 
         if let Some(TokenValue::Keyword(RETURN)) = next {
             tokens.next();

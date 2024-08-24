@@ -1,11 +1,11 @@
 ---
 source: tests/integration_test.rs
-expression: "run_code(r#\"\nif true {\n  break;\n};\n\"#)"
+expression: "run_code(r#\"\nexit 1000;\n\"#)"
 ---
 stdout: ""
 stderr: ""
 error:
   ExecutionError:
-    message: Break must be used in a loop block
+    message: "exit code must be between 0 and 255, but got 1000"
     call_stack: []
 exit_code: 103

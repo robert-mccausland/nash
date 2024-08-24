@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nexit 0;\nout(\"This should not be printed!\");\n\"#)"
+---
+stdout: ""
+stderr: ""
+error: ~
+exit_code: 0

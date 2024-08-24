@@ -332,4 +332,49 @@ var value = ("string", [1, 2, 3]);
 out(value.1.fmt());
 "#
     );
+
+    nash_test!(
+        should_be_able_to_return_with_an_exit_code,
+        r#"
+exit 69;
+"#
+    );
+
+    nash_test!(
+        should_fail_if_exit_used_with_non_integer,
+        r#"
+exit "test";
+"#
+    );
+
+    nash_test!(
+        should_fail_if_exit_used_with_out_of_range_value,
+        r#"
+exit 1000;
+"#
+    );
+
+    nash_test!(
+        should_be_able_to_return_from_nested_blocks,
+        r#"
+func main() {
+  for value in [1, 2, 3, 4, 5] {
+    out(value.fmt());
+    if value == 4 {
+      exit value;
+    };
+  };
+}
+
+main();
+"#
+    );
+
+    nash_test!(
+        should_not_run_any_code_after_exit,
+        r#"
+exit 0;
+out("This should not be printed!");
+"#
+    );
 }

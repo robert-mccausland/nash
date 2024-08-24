@@ -1,0 +1,20 @@
+#!/bin/nash
+
+# Exit
+
+func main() {
+  var index = 0;
+  while true {
+    index = index + 1;
+
+    if index > 3 {
+      exit 0;
+    };
+
+    out(index.fmt());
+  };
+}
+
+main();
+
+out("This code is never ran");

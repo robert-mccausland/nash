@@ -80,7 +80,7 @@ where
     ) -> EvaluationResult<Value>;
 }
 
-type EvaluationResult<T> = Result<T, EvaluationException>;
+pub type EvaluationResult<T> = Result<T, EvaluationException>;
 
 pub enum EvaluationException {
     AlterControlFlow(ControlFlowOptions),
