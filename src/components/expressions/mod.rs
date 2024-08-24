@@ -102,17 +102,20 @@ impl Accessor {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BaseExpression {
     content: Box<ExpressionContent>,
-    accessor: Option<Accessor>,
+    accessors: Vec<Accessor>,
 }
 
 impl BaseExpression {
     fn parse<'a, I: Iterator<Item = &'a Token<'a>>>(
         tokens: &mut Backtrackable<I>,
     ) -> Result<Self, ParserError> {
-        return Ok(BaseExpression {
-            content: ExpressionContent::parse(tokens)?.into(),
-            accessor: Accessor::try_parse(tokens)?,
-        });
+        let content = ExpressionContent::parse(tokens)?.into();
+        let mut accessors = Vec::new();
+        while let Some(accessor) = Accessor::try_parse(tokens)? {
+            accessors.push(accessor);
+        }
+
+        return Ok(BaseExpression { content, accessors });
     }
 
     fn evaluate(
@@ -120,27 +123,29 @@ impl BaseExpression {
         stack: &mut ExecutorStack,
         context: &mut ExecutorContext,
     ) -> EvaluationResult<Value> {
-        let value = self.content.evaluate(stack, context)?;
+        let mut value = self.content.evaluate(stack, context)?;
+        for accessor in &self.accessors {
+            match accessor {
+                Accessor::Integer(integer) => {
+                    let Value::Tuple(mut values) = value else {
+                        return Err("Cannot use get expression on non-tuple value".into());
+                    };
 
-        match &self.accessor {
-            Some(Accessor::Integer(integer)) => {
-                let Value::Tuple(mut values) = value else {
-                    return Err("Cannot use get expression on non-tuple value".into());
-                };
+                    let len = values.len();
+                    let result = values.get_mut(*integer as usize).ok_or(format!(
+                        "Cannot get element at index {:} because tuple only has {:} elements",
+                        integer, len
+                    ))?;
 
-                let len = values.len();
-                let result = values.get_mut(*integer as usize).ok_or(format!(
-                    "Cannot get element at index {:} because tuple only has {:} elements",
-                    integer, len
-                ))?;
-
-                Ok(core::mem::take(result).into())
+                    value = core::mem::take(result).into();
+                }
+                Accessor::Variable(variable) => {
+                    value = variable.evaluate_on_instance(Some(value), stack, context)?;
+                }
             }
-            Some(Accessor::Variable(variable)) => {
-                variable.evaluate_on_instance(Some(value), stack, context)
-            }
-            None => Ok(value.into()),
         }
+
+        return Ok(value);
     }
 }
 

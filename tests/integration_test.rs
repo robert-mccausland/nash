@@ -324,4 +324,12 @@ func main() {
 main();
 "#
     );
+
+    nash_test!(
+        should_be_able_to_chain_accessors,
+        r#"
+var value = ("string", [1, 2, 3]);
+out(value.1.fmt());
+"#
+    );
 }

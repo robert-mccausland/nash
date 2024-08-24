@@ -1,6 +1,6 @@
 ---
 source: src/parser/mod.rs
-expression: parse(tokens.iter()).unwrap()
+expression: parse(tokens).unwrap()
 ---
 statements:
   - Expression:
@@ -17,9 +17,9 @@ statements:
                       parts: []
                       end: test
                     arguments: []
-                accessor: ~
+                accessors: []
             capture_exit_code:
               Declaration:
                 value: exit_code
-        accessor: ~
+        accessors: []
 functions: []

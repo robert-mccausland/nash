@@ -11,17 +11,17 @@ statements:
             name:
               value: array
             arguments: ~
-        accessor:
-          Variable:
-            name:
-              value: push
-            arguments:
-              - operations: []
-                first:
-                  content:
-                    VariableExpression:
-                      name:
-                        value: value
-                      arguments: ~
-                  accessor: ~
+        accessors:
+          - Variable:
+              name:
+                value: push
+              arguments:
+                - operations: []
+                  first:
+                    content:
+                      VariableExpression:
+                        name:
+                          value: value
+                        arguments: ~
+                    accessors: []
 functions: []

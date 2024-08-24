@@ -18,12 +18,12 @@ statements:
                       StringLiteral:
                         parts: []
                         end: hi
-                    accessor: ~
+                    accessors: []
                 - operations: []
                   first:
                     content:
                       IntegerLiteral:
                         value: 123
-                    accessor: ~
-          accessor: ~
+                    accessors: []
+          accessors: []
 functions: []

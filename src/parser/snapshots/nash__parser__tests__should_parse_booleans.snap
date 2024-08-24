@@ -11,5 +11,5 @@ statements:
           content:
             BooleanLiteral:
               value: true
-          accessor: ~
+          accessors: []
 functions: []

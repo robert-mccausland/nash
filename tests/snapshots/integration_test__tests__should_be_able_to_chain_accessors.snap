@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nvar value = (\"string\", [1, 2, 3]);\nout(value.1.fmt());\n\"#)"
+---
+stdout: "[1,2,3]\n"
+stderr: ""
+error: ~
+exit_code: 0
