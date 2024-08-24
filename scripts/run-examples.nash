@@ -2,7 +2,7 @@
 
 # Disgusting hack because you can't declare empty arrays at the moment
 var failures = [""];
-pop(failures);
+failures.pop();
 
 for script in glob("./examples/*.nash") {
   out("Running script ${script}...");
@@ -10,11 +10,11 @@ for script in glob("./examples/*.nash") {
   out(output);
 
   if code != 0 {
-    var code = fmt(code);
+    var code = code.fmt();
     out("Nash script exited with non-zero code (${code})");
     out(output);
     out(err);
-    push(failures, script);
+    failures.push(script);
   } else {
     out("Nash script ${script} succeeded");
   };
@@ -22,9 +22,9 @@ for script in glob("./examples/*.nash") {
   out("");
 };
 
-if len(failures) != 0 {
+if failures.len() != 0 {
   out("Some scripts failed to execute!");
-  out(fmt(failures));
+  out(failures.fmt());
 } else {
   out("All scripts run successfully!");
 };

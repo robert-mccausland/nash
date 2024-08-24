@@ -3,6 +3,6 @@
 # While example
 var count = 0;
 while count < 10 {
-  out(fmt(count));
+  out(count.fmt());
   count = count + 1;
 };

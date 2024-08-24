@@ -2,6 +2,6 @@
 
 var tuple = ("hello", "world", 123, false);
 out(tuple.0);
-out(fmt(tuple.1));
-out(fmt(tuple.2));
-out(fmt(tuple.3));
+out(tuple.1.fmt());
+out(tuple.2.fmt());
+out(tuple.3.fmt());

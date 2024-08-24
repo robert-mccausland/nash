@@ -9,7 +9,7 @@ for value in data {
     continue;
   };
 
-  out(fmt(value));
+  out(value.fmt());
 };
 
 out("Done for loop!");
@@ -23,7 +23,7 @@ while true {
     break;
   };
 
-  out(fmt(index));
+  out(index.fmt());
 };
 
 out("Done while loop!");

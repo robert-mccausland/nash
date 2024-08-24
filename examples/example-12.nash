@@ -1,5 +1,5 @@
 #!/bin/nash
 
-# Globbing
+# Globing
 var values = glob("./examples/*.nash");
-out(fmt(values));
+out(values.fmt());

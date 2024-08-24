@@ -2,8 +2,8 @@
 
 # Array example
 var array = ["first", "second", "third"];
-out(pop(array));
-out(fmt(array));
+out(array.pop());
+out(array.fmt());
 
-push(array, "last");
-out(fmt(array));
+array.push("last");
+out(array.fmt());

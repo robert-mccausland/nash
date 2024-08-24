@@ -4,7 +4,7 @@
 
 func recurse(index: integer) {
   {
-    var index = fmt(index);
+    var index = index.fmt();
     out("iteration ${index}");
   };
   index = index + 1;

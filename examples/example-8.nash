@@ -1,4 +1,4 @@
 #!/bin/nash
 
 # Checking that nesting tuples and expressions works
-out(fmt((1 == 2, 1 == 1, "test")));
+out((1 == 2, 1 == 1, "test").fmt());
