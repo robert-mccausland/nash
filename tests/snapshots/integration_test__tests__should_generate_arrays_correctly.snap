@@ -1,7 +1,8 @@
 ---
 source: tests/integration_test.rs
-expression: "run_code(r#\"\nvar array = [0];\npush(array, 1);\npush(array, 2);\npush(array, 3);\nout(fmt(array));\n\"#)"
+expression: "run_code(r#\"\nvar array = [0];\narray.push(1);\narray.push(2);\narray.push(3);\nout(array.fmt());\n\"#)"
 ---
 stdout: "[0,1,2,3]\n"
 stderr: ""
 error: ~
+exit_code: 0

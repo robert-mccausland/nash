@@ -1,7 +1,8 @@
 ---
 source: tests/integration_test.rs
-expression: "run_code_with_setup(r#\"\n# Comments are fun!\nfunc main() {\n    var test_identifier = \"Blue \\\"cheese\\\" and rice!\";\n    if 1 + 1 == 2 {\n    out(test_identifier);\n    };\n\n    exec `echo something`;\n}\n\nmain();\n\"#,\n    |mock_command_executor, _mock_stdin|\n        {\n            mock_command_executor.expect_run().with(predicate::eq(Command::new(\"echo\".to_owned(),\n                                vec![\"something\".to_owned()]))).return_once(|_|\n                        {\n                            Ok(CommandResult {\n                                    status_code: 0.into(),\n                                    stdout: \"something\".to_owned(),\n                                    stderr: \"\".to_owned(),\n                                })\n                        }).once();\n        })"
+expression: "run_code_with_setup(r#\"\n# Comments are fun!\nfunc main() {\n    var test_identifier = \"Blue \\\"cheese\\\" and rice!\";\n    if 1 + 1 == 2 {\n    out(test_identifier);\n    };\n\n    exec `echo something`;\n}\n\nmain();\n\"#,\n    |mock_command_executor|\n        {\n            mock_command_executor.expect_run().with(predicate::eq(Command::new(\"echo\".to_owned(),\n                                vec![\"something\".to_owned()]))).return_once(|_|\n                        {\n                            Ok(CommandResult {\n                                    status_code: 0.into(),\n                                    stdout: \"something\".to_owned(),\n                                    stderr: \"\".to_owned(),\n                                })\n                        }).once();\n        })"
 ---
 stdout: "Blue \"cheese\" and rice!\n"
 stderr: ""
 error: ~
+exit_code: 0

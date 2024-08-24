@@ -10,3 +10,4 @@ error:
     token: Semicolon
     start: 13
     end: 14
+exit_code: 102

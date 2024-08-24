@@ -19,6 +19,7 @@ mod tests {
         stdout: String,
         stderr: String,
         error: Option<NashError>,
+        exit_code: u8,
     }
 
     fn run_code(script: &str) -> CodeOutput {
@@ -37,7 +38,7 @@ mod tests {
 
         setup(&mut mock_command_executor);
 
-        let error = {
+        let result = {
             let mut executor = Executor::new(
                 mock_command_executor,
                 &mut mock_in,
@@ -46,13 +47,19 @@ mod tests {
                 ExecutorOptions::default(),
             );
 
-            nash::execute(&mut script.as_bytes(), &mut executor).err()
+            nash::execute(&mut script.as_bytes(), &mut executor)
+        };
+
+        let exit_code = match &result {
+            Ok(output) => output.exit_code(),
+            Err(error) => error.exit_code(),
         };
 
         return CodeOutput {
             stdout: String::from_utf8(mock_out).unwrap(),
             stderr: String::from_utf8(mock_err).unwrap(),
-            error,
+            error: result.err(),
+            exit_code,
         };
     }
 

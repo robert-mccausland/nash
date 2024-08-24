@@ -5,3 +5,4 @@ expression: "run_code(r#\"\nfunc my_function(): string  {\n    if true {\n      
 stdout: "value\n"
 stderr: ""
 error: ~
+exit_code: 0

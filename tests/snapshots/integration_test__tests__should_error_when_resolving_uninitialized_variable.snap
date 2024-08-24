@@ -8,3 +8,4 @@ error:
   ExecutionError:
     message: Variable variable has not been initialized.
     call_stack: []
+exit_code: 103

@@ -69,15 +69,30 @@ impl<'a> Executor<'a> {
         )
     }
 
-    pub(crate) fn execute(&mut self, root: &Root) -> Result<(), ExecutionError> {
+    pub(crate) fn execute(&mut self, root: &Root) -> Result<ExecutionOutput, ExecutionError> {
         let mut stack = ExecutorStack::new();
 
-        root.execute(&mut stack, &mut self.context)
+        let exit_code = root
+            .execute(&mut stack, &mut self.context)
             .map_err(|mut err| {
                 err.set_call_stack(stack.get_call_stack().clone());
                 return err;
             })?;
 
-        return Ok(());
+        return Ok(ExecutionOutput::new(exit_code));
+    }
+}
+
+pub struct ExecutionOutput {
+    exit_code: u8,
+}
+
+impl ExecutionOutput {
+    fn new(exit_code: u8) -> Self {
+        Self { exit_code }
+    }
+
+    pub fn exit_code(&self) -> u8 {
+        self.exit_code
     }
 }

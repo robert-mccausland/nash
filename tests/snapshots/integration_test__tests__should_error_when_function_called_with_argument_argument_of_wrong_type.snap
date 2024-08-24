@@ -9,3 +9,4 @@ error:
     message: Argument arg has type string but got value with type integer
     call_stack:
       - test
+exit_code: 103

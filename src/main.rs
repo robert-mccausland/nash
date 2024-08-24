@@ -1,13 +1,31 @@
-use std::{env, error::Error, fs::File, path::PathBuf};
+use std::{env, error::Error, fs::File, path::PathBuf, process::ExitCode};
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let args = get_args()?;
-    let mut file = File::open(args.file_path)?;
+fn main() -> ExitCode {
+    match main_impl() {
+        Ok(code) => code,
+        Err(code) => code,
+    }
+    .into()
+}
+
+fn main_impl() -> Result<u8, u8> {
+    let args = get_args().map_err(|err| {
+        eprintln!("Invalid arguments: {err}");
+        100
+    })?;
+
+    let mut file = File::open(args.file_path).map_err(|err| {
+        eprintln!("Error reading file path: {err}");
+        100
+    })?;
 
     let mut executor = nash::Executor::default();
-    nash::execute(&mut file, &mut executor)?;
+    let result = nash::execute(&mut file, &mut executor).map_err(|err| {
+        eprintln!("Error running nash script: {err}");
+        err.exit_code()
+    })?;
 
-    Ok(())
+    return Ok(result.exit_code());
 }
 
 struct Arguments {

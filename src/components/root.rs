@@ -49,7 +49,7 @@ impl Root {
         &self,
         stack: &mut ExecutorStack,
         context: &mut ExecutorContext,
-    ) -> Result<(), ExecutionError> {
+    ) -> Result<u8, ExecutionError> {
         for function in &self.functions {
             stack.declare_function(&function.name.value, function.clone())?;
         }
@@ -67,6 +67,6 @@ impl Root {
         }
         stack.pop_scope();
 
-        return Ok(());
+        return Ok(0);
     }
 }

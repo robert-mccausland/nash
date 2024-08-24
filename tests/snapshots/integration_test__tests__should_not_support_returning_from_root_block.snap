@@ -8,3 +8,4 @@ error:
   ExecutionError:
     message: Control flow options are not allowed in the root block
     call_stack: []
+exit_code: 103

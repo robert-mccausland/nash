@@ -10,3 +10,4 @@ error:
     token: RightBracket
     start: 20
     end: 21
+exit_code: 102

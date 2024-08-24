@@ -8,3 +8,4 @@ error:
   ExecutionError:
     message: Can not assign a value of type string to a variable of type integer
     call_stack: []
+exit_code: 103

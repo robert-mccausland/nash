@@ -5,7 +5,7 @@ use serde::Serialize;
 use crate::lexer::Token;
 
 macro_rules! impl_error {
-    ($error:ident) => {
+    ($error:ident $(,$exit_code:expr)?) => {
         impl Error for $error {
             fn source(&self) -> Option<&(dyn Error + 'static)> {
                 None
@@ -31,6 +31,14 @@ macro_rules! impl_error {
                 Self::new(value)
             }
         }
+
+        $(
+            impl $error {
+                pub fn exit_code(&self) -> u8 {
+                    $exit_code
+                }
+            }
+        )?
     };
 }
 
@@ -47,6 +55,15 @@ macro_rules! nash_error {
         impl NashError {
             fn new(value: String) -> Self {
                 Self::Other(value)
+            }
+
+            pub fn exit_code(&self) -> u8 {
+                match self {
+                    $(
+                        Self::$error(value) => value.exit_code(),
+                    )*
+                    Self::Other(_) => 100
+                }
             }
         }
 
@@ -96,7 +113,7 @@ impl Display for LexerError {
     }
 }
 
-impl_error!(LexerError);
+impl_error!(LexerError, 101);
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct ParserError {
@@ -129,7 +146,7 @@ impl Display for ParserError {
     }
 }
 
-impl_error!(ParserError);
+impl_error!(ParserError, 102);
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct ExecutionError {
@@ -156,4 +173,4 @@ impl Display for ExecutionError {
     }
 }
 
-impl_error!(ExecutionError);
+impl_error!(ExecutionError, 103);

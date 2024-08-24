@@ -8,3 +8,4 @@ error:
   ExecutionError:
     message: Array must have all values of the same type
     call_stack: []
+exit_code: 103

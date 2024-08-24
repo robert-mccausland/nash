@@ -9,3 +9,4 @@ error:
     message: Control flow option not supported in this context
     call_stack:
       - main
+exit_code: 103

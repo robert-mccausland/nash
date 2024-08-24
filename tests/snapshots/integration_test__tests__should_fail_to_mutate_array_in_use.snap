@@ -1,6 +1,6 @@
 ---
 source: tests/integration_test.rs
-expression: "run_code(r#\"\n# Array example\nvar array = [\"first\", \"second\", \"third\"];\nfor value in array {\n  pop(array);\n};\n\"#)"
+expression: "run_code(r#\"\n# Array example\nvar array = [\"first\", \"second\", \"third\"];\nfor value in array {\n  array.pop();\n};\n\"#)"
 ---
 stdout: ""
 stderr: ""
@@ -9,3 +9,4 @@ error:
     message: Cannot mutate array that is already being used
     call_stack:
       - pop
+exit_code: 103

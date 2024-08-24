@@ -8,3 +8,4 @@ error:
   ExecutionError:
     message: Unable to determine array type for empty array
     call_stack: []
+exit_code: 103

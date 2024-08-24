@@ -3,6 +3,7 @@ use std::io::Read;
 
 pub use errors::{ExecutionError, LexerError, NashError, ParserError};
 pub use executor::commands::{Command, CommandExecutor, CommandResult, SystemCommandExecutor};
+pub use executor::ExecutionOutput;
 pub use executor::{Executor, ExecutorOptions};
 
 mod components;
@@ -13,43 +14,48 @@ mod lexer;
 mod parser;
 mod utils;
 
-pub fn execute<R: Read>(script: &mut R, executor: &mut Executor) -> Result<(), NashError> {
+pub fn execute<R: Read>(
+    script: &mut R,
+    executor: &mut Executor,
+) -> Result<ExecutionOutput, NashError> {
     let mut content = String::new();
     script
         .read_to_string(&mut content)
         .map_err(|err| format!("Unable to read script: {err}"))?;
 
-    let tokens = lexer::lex(content.as_str()).collect::<Result<Vec<_>, _>>()?;
-
-    let root = match parser::parse(tokens) {
-        Ok(root) => root,
-        Err(err) => {
+    let tokens = lexer::lex(content.as_str())
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|err| {
             eprintln!("Error parsing script:");
-            eprintln!(
-                "{}",
-                format_error(&err, &content)
-                    .unwrap_or("Warning: Unable to write error information".to_owned())
-            );
-            return Err(err.into());
-        }
-    };
-
-    match executor.execute(&root) {
-        Ok(()) => {}
-        Err(err) => {
-            eprintln!("Error executing script: {err}");
-            if let Some(call_stack) = &err.call_stack {
-                let formatted_stack = call_stack
-                    .into_iter()
-                    .fold("@root".to_owned(), |a, b| format!("{b}\n{a}"));
-                eprintln!("Call stack: \n{formatted_stack}");
+            eprintln!("{}", err.message);
+            if let Some(position) = err.position {
+                eprintln!("At position {}", position);
             }
+            return err;
+        })?;
 
-            return Err(err.into());
+    let root = parser::parse(tokens).map_err(|err| {
+        eprintln!("Error parsing script:");
+        eprintln!(
+            "{}",
+            format_error(&err, &content).expect("Unable to write error information")
+        );
+        return err;
+    })?;
+
+    let result = executor.execute(&root).map_err(|err| {
+        eprintln!("Error executing script: {err}");
+        if let Some(call_stack) = &err.call_stack {
+            let formatted_stack = call_stack
+                .into_iter()
+                .fold("@root".to_owned(), |a, b| format!("{b}\n{a}"));
+            eprintln!("Call stack: \n{formatted_stack}");
         }
-    }
 
-    return Ok(());
+        return err;
+    })?;
+
+    return Ok(result);
 }
 
 fn format_error(error: &ParserError, source_file: &str) -> Result<String, Error> {

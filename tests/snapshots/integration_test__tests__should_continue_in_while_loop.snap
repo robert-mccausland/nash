@@ -1,7 +1,8 @@
 ---
 source: tests/integration_test.rs
-expression: "run_code(r#\"\nvar index = 0;\nwhile index < 5 {\n    index = index + 1;\n    if index == 2 {\n      continue;\n    };\n    out(fmt(index));\n};\n\"#)"
+expression: "run_code(r#\"\nvar index = 0;\nwhile index < 5 {\n    index = index + 1;\n    if index == 2 {\n      continue;\n    };\n    out(index.fmt());\n};\n\"#)"
 ---
 stdout: "1\n3\n4\n5\n"
 stderr: ""
 error: ~
+exit_code: 0
