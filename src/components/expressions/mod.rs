@@ -69,38 +69,49 @@ impl Expression {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct BaseExpression {
-    content: Box<ExpressionContent>,
-    accessor: Option<u32>,
+pub enum Accessor {
+    Integer(u32),
+    Variable(VariableExpression),
 }
 
-impl BaseExpression {
-    fn try_parse_accessor<'a, I: Iterator<Item = &'a Token<'a>>>(
+impl Accessor {
+    fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
         tokens: &mut Backtrackable<I>,
-    ) -> Option<u32> {
-        tokens.backtrack_if_none(|tokens| {
-            let Some(TokenValue::Dot()) = tokens.next_value() else {
-                return None;
-            };
+    ) -> Result<Option<Self>, ParserError> {
+        let Some(TokenValue::Dot()) = tokens.peek_value() else {
+            return Ok(None);
+        };
+        tokens.next();
 
-            let Some(TokenValue::IntegerLiteral(integer)) = tokens.next_value() else {
-                return None;
-            };
+        if let Some(TokenValue::IntegerLiteral(integer)) = tokens.peek_value() {
+            tokens.next();
+            let value = u32::from_str_radix(integer, 10).map_err::<ParserError, _>(|_| {
+                "Numeric accessors must be positive integers {err}".into()
+            })?;
+            return Ok(Some(Accessor::Integer(value)));
+        }
 
-            return u32::from_str_radix(integer, 10).into_iter().next();
-        })
+        if let Some(value) = VariableExpression::try_parse(tokens)? {
+            return Ok(Some(Accessor::Variable(value)));
+        }
+
+        return Err("Unable to parse accessor".into());
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct BaseExpression {
+    content: Box<ExpressionContent>,
+    accessor: Option<Accessor>,
 }
 
 impl BaseExpression {
     fn parse<'a, I: Iterator<Item = &'a Token<'a>>>(
         tokens: &mut Backtrackable<I>,
     ) -> Result<Self, ParserError> {
-        let content = ExpressionContent::parse(tokens)?;
-        let accessor = Self::try_parse_accessor(tokens);
         return Ok(BaseExpression {
-            accessor,
-            content: content.into(),
+            content: ExpressionContent::parse(tokens)?.into(),
+            accessor: Accessor::try_parse(tokens)?,
         });
     }
 
@@ -111,20 +122,24 @@ impl BaseExpression {
     ) -> EvaluationResult<Value> {
         let value = self.content.evaluate(stack, context)?;
 
-        if let Some(accessor) = self.accessor {
-            let Value::Tuple(mut values) = value else {
-                return Err("Cannot use get expression on non-tuple value".into());
-            };
+        match &self.accessor {
+            Some(Accessor::Integer(integer)) => {
+                let Value::Tuple(mut values) = value else {
+                    return Err("Cannot use get expression on non-tuple value".into());
+                };
 
-            let len = values.len();
-            let result = values.get_mut(accessor as usize).ok_or(format!(
-                "Cannot get element at index {:} because tuple only has {:} elements",
-                accessor, len
-            ))?;
+                let len = values.len();
+                let result = values.get_mut(*integer as usize).ok_or(format!(
+                    "Cannot get element at index {:} because tuple only has {:} elements",
+                    integer, len
+                ))?;
 
-            Ok(core::mem::take(result).into())
-        } else {
-            Ok(value.into())
+                Ok(core::mem::take(result).into())
+            }
+            Some(Accessor::Variable(variable)) => {
+                variable.evaluate_on_instance(Some(value), stack, context)
+            }
+            None => Ok(value.into()),
         }
     }
 }

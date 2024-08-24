@@ -86,4 +86,19 @@ mod tests {
 
         assert_yaml_snapshot!(parse(tokens).unwrap());
     }
+
+    #[test]
+    fn should_parse_instance_method() {
+        let tokens = tokens![
+            TokenValue::Identifier("array"),
+            TokenValue::Dot(),
+            TokenValue::Identifier("push"),
+            TokenValue::LeftBracket(),
+            TokenValue::Identifier("value"),
+            TokenValue::RightBracket(),
+            TokenValue::Semicolon(),
+        ];
+
+        assert_yaml_snapshot!(parse(tokens).unwrap());
+    }
 }

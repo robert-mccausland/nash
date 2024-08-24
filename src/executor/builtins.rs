@@ -2,7 +2,10 @@ use std::cell::RefCell;
 
 use crate::errors::ExecutionError;
 
-use super::{ExecutorContext, Type, Value};
+use super::{
+    values::{Type, Value},
+    ExecutorContext,
+};
 
 const READ_BUF_SIZE: usize = 256;
 
@@ -16,10 +19,6 @@ pub fn call_builtin(
         ("in", []) => r#in(context),
         ("err", [Value::String(arg1)]) => err(context, arg1),
         ("out", [Value::String(arg1)]) => out(context, arg1),
-        ("fmt", [arg1]) => fmt(context, arg1),
-        ("push", [Value::Array(arg1, _), arg2]) => push(context, arg1.as_ref(), arg2),
-        ("pop", [Value::Array(arg1, _)]) => pop(context, arg1.as_ref()),
-        ("len", [Value::Array(arg1, _)]) => len(context, arg1.as_ref()),
         ("glob", [Value::String(arg1)]) => glob(context, arg1),
         (name, args) => {
             let args = args
@@ -29,6 +28,41 @@ pub fn call_builtin(
                 .unwrap_or(String::new());
             return Err(
                 format!("No function found with name: '{name}' and arguments: {args}").into(),
+            );
+        }
+    }
+}
+
+pub fn call_builtin_instance(
+    name: &str,
+    instance: &Value,
+    args: &[Value],
+    context: &mut ExecutorContext,
+) -> Result<Value, ExecutionError> {
+    match (name, instance, args) {
+        ("fmt", instance, []) => fmt(context, instance),
+        ("push", Value::Array(instance, array_type), [value]) => {
+            if array_type != &value.get_type() {
+                return Err(format!(
+                    "Can not push a value of type {} to an array with type {}",
+                    value.get_type(),
+                    array_type,
+                )
+                .into());
+            }
+            push(context, instance.as_ref(), value)
+        }
+        ("pop", Value::Array(instance, _), []) => pop(context, instance.as_ref()),
+        ("len", Value::Array(instance, _), []) => len(context, instance.as_ref()),
+        (name, instance, args) => {
+            let args = args
+                .iter()
+                .map(|arg| format!("{}", arg.get_type()))
+                .reduce(|value, acc| format!("{acc}, {value}"))
+                .unwrap_or(String::new());
+            let instance_type = instance.get_type();
+            return Err(
+                format!("No function found with name: {name} on type {instance_type} that accepts arguments {args}").into(),
             );
         }
     }

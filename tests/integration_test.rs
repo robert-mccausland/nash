@@ -111,7 +111,7 @@ main();
 # Array example
 var array = ["first", "second", "third"];
 for value in array {
-  pop(array);
+  array.pop();
 };
 "#
     );
@@ -157,10 +157,10 @@ var variable;
         should_generate_arrays_correctly,
         r#"
 var array = [0];
-push(array, 1);
-push(array, 2);
-push(array, 3);
-out(fmt(array));
+array.push(1);
+array.push(2);
+array.push(3);
+out(array.fmt());
 "#
     );
 
@@ -244,7 +244,7 @@ while true {
   if index == 5 {
     break;
   };
-  out(fmt(index));
+  out(index.fmt());
 };
 "#
     );
@@ -258,7 +258,7 @@ while index < 5 {
     if index == 2 {
       continue;
     };
-    out(fmt(index));
+    out(index.fmt());
 };
 "#
     );
@@ -270,7 +270,7 @@ for item in [1, 2, 3, 4, 5] {
     if item == 3 {
       continue;
     };
-    out(fmt(item));
+    out(item.fmt());
 };
 "#
     );

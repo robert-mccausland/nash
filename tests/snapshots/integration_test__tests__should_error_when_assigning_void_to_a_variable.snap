@@ -7,5 +7,4 @@ stderr: ""
 error:
   ExecutionError:
     message: Variables must not be declared with a type of void
-    call_stack:
-      - test
+    call_stack: []

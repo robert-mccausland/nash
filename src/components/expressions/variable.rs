@@ -54,23 +54,36 @@ impl Parsable for VariableExpression {
     }
 }
 
+impl VariableExpression {
+    pub fn evaluate_on_instance(
+        &self,
+        instance: Option<Value>,
+        stack: &mut ExecutorStack,
+        context: &mut ExecutorContext,
+    ) -> EvaluationResult<Value> {
+        Ok(if let Some(arguments) = &self.arguments {
+            let arguments = arguments
+                .iter()
+                .map(|x| x.evaluate(stack, context))
+                .collect::<Result<Vec<_>, _>>()?;
+
+            stack
+                .execute_function(&self.name.value, instance, arguments, context)?
+                .into()
+        } else if instance.is_none() {
+            stack.resolve_variable(&self.name.value)?.into()
+        } else {
+            return Err("Instance variables are not yet implemented".into());
+        })
+    }
+}
+
 impl Evaluatable for VariableExpression {
     fn evaluate(
         &self,
         stack: &mut ExecutorStack,
         context: &mut ExecutorContext,
     ) -> EvaluationResult<Value> {
-        Ok(if let Some(arguments) = &self.arguments {
-            let mut evaluated_arguments = Vec::new();
-            for argument in arguments {
-                evaluated_arguments.push(argument.evaluate(stack, context)?)
-            }
-
-            stack
-                .execute_function(&self.name.value, evaluated_arguments, context)?
-                .into()
-        } else {
-            stack.resolve_variable(&self.name.value)?.into()
-        })
+        self.evaluate_on_instance(None, stack, context)
     }
 }
