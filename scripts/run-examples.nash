@@ -5,8 +5,16 @@ var failures = [""];
 failures.pop();
 
 for script in glob("./examples/*.nash") {
+
+  var command = `nash "${script}"`;
+
+  # This script requires user input...
+  if script.ends_with("example-21.nash") {
+    command = `echo test_input` => command;
+  };
+
   out("Running script ${script}...");
-  var (output, err) = exec `nash "${script}"` ? var code;
+  var (output, err) = exec command ? var code;
   out(output);
 
   if code != 0 {
@@ -25,6 +33,7 @@ for script in glob("./examples/*.nash") {
 if failures.len() != 0 {
   out("Some scripts failed to execute!");
   out(failures.fmt());
+  exit 1;
 } else {
   out("All scripts run successfully!");
 };

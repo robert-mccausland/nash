@@ -7,8 +7,6 @@ use super::{
     ExecutorContext,
 };
 
-const READ_BUF_SIZE: usize = 256;
-
 pub fn call_builtin(
     name: &str,
     args: &[Value],
@@ -16,7 +14,7 @@ pub fn call_builtin(
 ) -> Result<Value, ExecutionError> {
     match (name, args) {
         ("parse_int", [Value::String(arg1)]) => Ok(Value::Integer(parse_int(arg1)?)),
-        ("in", []) => r#in(context),
+        ("read", []) => read(context),
         ("err", [Value::String(arg1)]) => err(context, arg1),
         ("out", [Value::String(arg1)]) => out(context, arg1),
         ("glob", [Value::String(arg1)]) => glob(context, arg1),
@@ -53,7 +51,11 @@ pub fn call_builtin_instance(
             push(context, instance.as_ref(), value)
         }
         ("pop", Value::Array(instance, _), []) => pop(context, instance.as_ref()),
-        ("len", Value::Array(instance, _), []) => len(context, instance.as_ref()),
+        ("len", Value::Array(instance, _), []) => array_len(context, instance.as_ref()),
+        ("len", Value::String(instance), []) => string_len(context, instance),
+        ("ends_with", Value::String(instance), [Value::String(value)]) => {
+            ends_with(context, instance, value)
+        }
         (name, instance, args) => {
             let args = args
                 .iter()
@@ -73,28 +75,24 @@ fn parse_int(value: &str) -> Result<i32, ExecutionError> {
         .map_err(|_| format!("Could not parse string {:} into integer", value).into())
 }
 
-fn r#in(context: &mut ExecutorContext) -> Result<Value, ExecutionError> {
-    let mut buf = vec![0; READ_BUF_SIZE];
-    let mut value = String::new();
-    loop {
-        let size = match context.stdin.read_until(b'\n', &mut buf) {
-            Ok(n) => n,
-            Err(err) => return Err(format!("Error reading from stdin: {err}").into()),
-        };
+fn read(context: &mut ExecutorContext) -> Result<Value, ExecutionError> {
+    let mut buf = Vec::new();
+    context
+        .stdin
+        .read_until(b'\n', &mut buf)
+        .map_err::<ExecutionError, _>(|err| format!("Error reading from stdin: {err}").into())?;
 
-        let buffer = match std::str::from_utf8(&buf[0..size]) {
-            Ok(result) => result,
-            Err(err) => {
-                return Err(format!("Bytes read from stdin was not valid utf8: {err}").into())
-            }
-        };
-
-        value.push_str(buffer);
-
-        if size < READ_BUF_SIZE {
-            return Ok(Value::String(value));
-        }
+    // Tidy up any newline stuff that is potentially here
+    buf.pop();
+    if buf.ends_with(&[b'\r']) {
+        buf.pop();
     }
+
+    let value = String::from_utf8(buf).map_err::<ExecutionError, _>(|err| {
+        format!("Bytes read from stdin was not valid utf8: {err}").into()
+    })?;
+
+    return Ok(value.into());
 }
 
 fn out(context: &mut ExecutorContext, value: &str) -> Result<Value, ExecutionError> {
@@ -114,7 +112,7 @@ fn err(context: &mut ExecutorContext, value: &str) -> Result<Value, ExecutionErr
 }
 
 fn fmt(_: &mut ExecutorContext, value: &Value) -> Result<Value, ExecutionError> {
-    return Ok(Value::String(format!("{value:}")));
+    return Ok(format!("{value:}").into());
 }
 
 fn push(
@@ -144,7 +142,7 @@ fn pop(
         .ok_or::<ExecutionError>("Unable to pop array with no elements".into())?)
 }
 
-fn len(
+fn array_len(
     _context: &mut ExecutorContext,
     array: &RefCell<Vec<Value>>,
 ) -> Result<Value, ExecutionError> {
@@ -157,6 +155,25 @@ fn len(
                 format!("Unable to convert array length into i32: {err}").into()
             })?,
     ))
+}
+
+fn string_len(_context: &mut ExecutorContext, string: &str) -> Result<Value, ExecutionError> {
+    Ok(Value::Integer(
+        string
+            .len()
+            .try_into()
+            .map_err::<ExecutionError, _>(|err| {
+                format!("Unable to convert string length into i32: {err}").into()
+            })?,
+    ))
+}
+
+fn ends_with(
+    _context: &mut ExecutorContext,
+    instance: &str,
+    value: &str,
+) -> Result<Value, ExecutionError> {
+    Ok(instance.ends_with(value).into())
 }
 
 fn glob(_context: &mut ExecutorContext, pattern: &str) -> Result<Value, ExecutionError> {

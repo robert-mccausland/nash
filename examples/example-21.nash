@@ -1,0 +1,7 @@
+#!/bin/nash
+
+# Read
+
+out("Enter some input: ");
+var input = read();
+out("You entered: \"${input}\"");

@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code_with_setup(r#\"\nvar input1 = read();\nvar input2 = read();\nvar input3 = read();\nout((input1, input2, input3).fmt());\n\"#,\n    \"test_input_1\\ntest_input_2\\ntest_input_3\\n\", |_| {})"
+---
+stdout: "(\"test_input_1\",\"test_input_2\",\"test_input_3\")\n"
+stderr: ""
+error: ~
+exit_code: 0

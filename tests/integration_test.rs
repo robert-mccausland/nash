@@ -23,14 +23,15 @@ mod tests {
     }
 
     fn run_code(script: &str) -> CodeOutput {
-        run_code_with_setup(script, |_| {})
+        run_code_with_setup(script, "", |_| {})
     }
 
     fn run_code_with_setup<F: FnOnce(&mut MockCommandExecutor)>(
         script: &str,
+        input: &str,
         setup: F,
     ) -> CodeOutput {
-        let input = Vec::new();
+        let input = input.as_bytes().to_vec();
         let mut mock_command_executor = MockCommandExecutor::new();
         let mut mock_in = BufReader::new(&input[..]);
         let mut mock_out = Vec::new();
@@ -71,10 +72,17 @@ mod tests {
             }
         };
 
-        ($name:ident, $code:expr, $setup:expr) => {
+        ($name:ident, $code:expr, $input:expr) => {
             #[test]
             fn $name() {
-                assert_yaml_snapshot!(run_code_with_setup($code, $setup));
+                assert_yaml_snapshot!(run_code_with_setup($code, $input, |_| {}));
+            }
+        };
+
+        ($name:ident, $code:expr, $input:expr, $setup:expr) => {
+            #[test]
+            fn $name() {
+                assert_yaml_snapshot!(run_code_with_setup($code, $input, $setup));
             }
         };
     }
@@ -94,6 +102,7 @@ func main() {
 
 main();
 "#,
+        "",
         |mock_command_executor| {
             mock_command_executor
                 .expect_run()
@@ -376,5 +385,33 @@ main();
 exit 0;
 out("This should not be printed!");
 "#
+    );
+
+    nash_test!(
+        strings_should_be_equal_if_contents_is_the_same,
+        r#"
+var my_value = "my_string" == "my_string";
+out(my_value.fmt());
+"#
+    );
+
+    nash_test!(
+        should_accept_input_using_read,
+        r#"
+var input1 = read();
+var input2 = read();
+var input3 = read();
+out((input1, input2, input3).fmt());
+"#,
+        "test_input_1\ntest_input_2\ntest_input_3\n"
+    );
+
+    nash_test!(
+        should_strip_trailing_carriage_return_from_input,
+        r#"
+var test_input = read();
+out(test_input.fmt());
+"#,
+        "my_fancy_input\r\nextra_stuff_here"
     );
 }

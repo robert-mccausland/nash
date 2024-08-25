@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code_with_setup(r#\"\nvar test_input = read();\nout(test_input.fmt());\n\"#,\n    \"my_fancy_input\\r\\nextra_stuff_here\", |_| {})"
+---
+stdout: "\"my_fancy_input\"\n"
+stderr: ""
+error: ~
+exit_code: 0

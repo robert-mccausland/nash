@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nvar my_value = \"my_string\" == \"my_string\";\nout(my_value.fmt());\n\"#)"
+---
+stdout: "true\n"
+stderr: ""
+error: ~
+exit_code: 0
