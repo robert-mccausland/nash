@@ -38,23 +38,22 @@ fn try_parse_collection<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
 ) -> Result<Option<Vec<Expression>>, crate::errors::ParserError> {
     if Some(start) == tokens.peek_value() {
         tokens.next();
-        let mut values = Vec::new();
-        if Some(end) == tokens.peek_value() {
-            tokens.next();
-        } else {
-            loop {
-                values.push(Expression::parse(tokens)?);
 
-                let next = tokens.next_value();
-                let Some(TokenValue::Comma()) = next else {
-                    if Some(end) == next {
-                        break;
-                    }
-                    return Err("Unable to parse collection".into());
-                };
-            }
+        let mut values = Vec::new();
+        while Some(end) != tokens.peek_value() {
+            values.push(Expression::parse(tokens)?);
+            let Some(TokenValue::Comma()) = tokens.peek_value() else {
+                if Some(end) == tokens.peek_value() {
+                    // Allow omitting the trailing comma
+                    continue;
+                }
+
+                return Err("Expected , after  each value of collection".into());
+            };
+            tokens.next();
         }
 
+        tokens.next();
         return Ok(Some(values));
     }
 

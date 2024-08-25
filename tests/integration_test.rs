@@ -422,4 +422,27 @@ var variable = 123;
 out("My variable is: ${variable.fmt()}!");
 "#
     );
+
+    nash_test!(
+        should_allow_brackets_to_be_used_to_wrap_expressions,
+        r#"
+var string = (1 + 2).fmt();
+out(string);
+"#
+    );
+
+    nash_test!(
+        should_allow_singleton_tuples_by_using_trailing_comma,
+        r#"
+var string = (1 + 2,).fmt();
+out(string);
+"#
+    );
+
+    nash_test!(
+        should_allow_arrays_with_trailing_commas,
+        r#"
+out([1, 2, 3, 4,].fmt());
+"#
+    );
 }

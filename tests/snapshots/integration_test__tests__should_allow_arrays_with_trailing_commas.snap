@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nout([1, 2, 3, 4,].fmt());\n\"#)"
+---
+stdout: "[1,2,3,4]\n"
+stderr: ""
+error: ~
+exit_code: 0

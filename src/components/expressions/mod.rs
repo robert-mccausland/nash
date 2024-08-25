@@ -5,6 +5,7 @@ use crate::{
 };
 
 mod block;
+mod brackets;
 mod branch;
 mod collections;
 mod execute;
@@ -20,6 +21,7 @@ use super::{
 };
 
 use block::BlockExpression;
+use brackets::BracketExpression;
 use branch::BranchExpression;
 use collections::{ArrayExpression, TupleExpression};
 use execute::ExecuteExpression;
@@ -195,6 +197,9 @@ expression_content!([
     IntegerLiteral,
     CommandLiteral,
     ArrayExpression,
+    // Note: brackets must be matched before tuples, as the tuple matcher will also match expressions
+    // that should be bracket expressions.
+    BracketExpression,
     TupleExpression,
     VariableExpression,
     ExecuteExpression,

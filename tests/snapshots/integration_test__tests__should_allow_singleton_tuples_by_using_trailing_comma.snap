@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nvar string = (1 + 2,).fmt();\nout(string);\n\"#)"
+---
+stdout: "(3)\n"
+stderr: ""
+error: ~
+exit_code: 0

@@ -1,9 +1,5 @@
 #!/bin/nash
 
 out(`test something`.fmt());
-
-# Oh no we can't use brackets to call an instance method on an intermediate value here 
-var test2 = `test something` => `test something else`;
-var test3 = `test something` => `test something else` => "file";
-out(test2.fmt());
-out(test3.fmt());
+out((`test something` => `test something else`).fmt());
+out((`test something` => `test something else` => "file").fmt());
