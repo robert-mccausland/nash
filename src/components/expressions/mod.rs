@@ -1,3 +1,5 @@
+use std::io::prelude;
+
 use crate::{
     executor::{ExecutorContext, ExecutorStack, Value},
     lexer::{Token, TokenValue},
@@ -31,15 +33,15 @@ use variable::VariableExpression;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Expression {
-    pub operator: Option<(Operator, BaseExpression)>,
+    pub operations: Vec<(Operator, BaseExpression)>,
     pub first: BaseExpression,
 }
 
 impl Expression {
-    pub fn new(first: BaseExpression, operator: Option<(Operator, BaseExpression)>) -> Self {
+    pub fn new(first: BaseExpression, operations: Vec<(Operator, BaseExpression)>) -> Self {
         Self {
             first: first.into(),
-            operator,
+            operations,
         }
     }
 
@@ -47,13 +49,12 @@ impl Expression {
         tokens: &mut Backtrackable<I>,
     ) -> Result<Expression, ParserError> {
         let expression = BaseExpression::parse(tokens)?;
-        let operator = if let Some(operator) = Operator::try_parse(tokens) {
-            Some((operator, BaseExpression::parse(tokens)?))
-        } else {
-            None
-        };
+        let mut operations = Vec::new();
+        while let Some(operator) = Operator::try_parse(tokens) {
+            operations.push((operator, BaseExpression::parse(tokens)?));
+        }
 
-        return Ok(Expression::new(expression, operator));
+        return Ok(Expression::new(expression, operations));
     }
 
     pub fn evaluate(
@@ -61,14 +62,21 @@ impl Expression {
         stack: &mut ExecutorStack,
         context: &mut ExecutorContext,
     ) -> EvaluationResult<Value> {
-        let left = self.first.evaluate(stack, context)?;
+        let mut result = self.first.evaluate(stack, context)?;
+        let mut previous: Option<&Operator> = None;
 
-        return Ok(if let Some((operator, expression)) = &self.operator {
+        for (operator, expression) in &self.operations {
             let right = expression.evaluate(stack, context)?;
-            operator.execute(left, right)?
-        } else {
-            left.into()
-        });
+            if let Some(previous) = previous {
+                if !previous.commutes_with(operator) {
+                    return Err(format!("Chaining {previous:?} with {operator:?} is not supported because they do no commute."))?;
+                }
+            }
+
+            result = operator.execute(result, right)?;
+            previous = Some(operator);
+        }
+        return Ok(result.into());
     }
 }
 

@@ -1,0 +1,11 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nout((1 + 2 + 3 + 4 * 10).fmt());\n\"#)"
+---
+stdout: ""
+stderr: ""
+error:
+  ExecutionError:
+    message: Chaining Addition with Multiplication is not supported because they do no commute.
+    call_stack: []
+exit_code: 103

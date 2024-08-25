@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nout((69 % 30).fmt());\n\"#)"
+---
+stdout: "9\n"
+stderr: ""
+error: ~
+exit_code: 0

@@ -11,6 +11,12 @@ const DOUBLE_QUOTE: &str = "\"";
 const BACKTICK: &str = "`";
 const EQUALS: &str = "=";
 const PLUS: &str = "+";
+const DASH: &str = "-";
+const STAR: &str = "*";
+const FORWARD_SLASH: &str = "/";
+const PERCENT: &str = "%";
+const AND: &str = "&";
+const PIPE: &str = "|";
 const LEFT_BRACKET: &str = "(";
 const RIGHT_BRACKET: &str = ")";
 const LEFT_CURLY: &str = "{";
@@ -94,6 +100,12 @@ define_tokens! {
     BACKTICK => Backtick,
     EQUALS => Equals,
     PLUS => Plus,
+    DASH => Dash,
+    STAR => Star,
+    FORWARD_SLASH => ForwardSlash,
+    PERCENT => Percent,
+    AND => And,
+    PIPE => Pipe,
     LEFT_BRACKET => LeftBracket,
     RIGHT_BRACKET => RightBracket,
     LEFT_CURLY => LeftCurly,

@@ -4,7 +4,7 @@ expression: parse(tokens).unwrap()
 ---
 statements:
   - Expression:
-      operator: ~
+      operations: []
       first:
         content:
           VariableExpression:
@@ -16,7 +16,7 @@ statements:
               name:
                 value: push
               arguments:
-                - operator: ~
+                - operations: []
                   first:
                     content:
                       VariableExpression:

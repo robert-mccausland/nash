@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nif false || true {\n  out(\"yes!\");\n};\n\"#)"
+---
+stdout: "yes!\n"
+stderr: ""
+error: ~
+exit_code: 0

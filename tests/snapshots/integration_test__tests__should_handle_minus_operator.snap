@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nout((10 - 5).fmt());\n\"#)"
+---
+stdout: "5\n"
+stderr: ""
+error: ~
+exit_code: 0

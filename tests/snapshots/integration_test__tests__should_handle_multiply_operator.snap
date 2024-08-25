@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nout((6 * 7).fmt());\n\"#)"
+---
+stdout: "42\n"
+stderr: ""
+error: ~
+exit_code: 0

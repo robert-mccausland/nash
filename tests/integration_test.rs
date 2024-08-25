@@ -93,7 +93,7 @@ mod tests {
 # Comments are fun!
 func main() {
     var test_identifier = "Blue \"cheese\" and rice!";
-    if 1 + 1 == 2 {
+    if (1 + 1) == 2 {
     out(test_identifier);
     };
 
@@ -443,6 +443,66 @@ out(string);
         should_allow_arrays_with_trailing_commas,
         r#"
 out([1, 2, 3, 4,].fmt());
+"#
+    );
+
+    nash_test!(
+        should_handle_minus_operator,
+        r#"
+out((10 - 5).fmt());
+"#
+    );
+
+    nash_test!(
+        should_handle_multiply_operator,
+        r#"
+out((6 * 7).fmt());
+"#
+    );
+
+    nash_test!(
+        should_handle_divide_operator,
+        r#"
+out((30 / 5).fmt());
+"#
+    );
+
+    nash_test!(
+        should_handle_remainder_operator,
+        r#"
+out((69 % 30).fmt());
+"#
+    );
+
+    nash_test!(
+        should_handle_and_operator,
+        r#"
+if true && true {
+  out("yes!");
+};
+"#
+    );
+
+    nash_test!(
+        should_handle_or_operator,
+        r#"
+if false || true {
+  out("yes!");
+};
+"#
+    );
+
+    nash_test!(
+        should_allow_chaining_commutative_operators,
+        r#"
+out((1 + 2 + 3 + 4 - 10).fmt());
+"#
+    );
+
+    nash_test!(
+        should_not_allow_chaining_non_commutative_operators,
+        r#"
+out((1 + 2 + 3 + 4 * 10).fmt());
 "#
     );
 }

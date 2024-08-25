@@ -7,19 +7,19 @@ statements:
       - Tuple:
           - value: one
           - value: two
-      - operator: ~
+      - operations: []
         first:
           content:
             TupleExpression:
               values:
-                - operator: ~
+                - operations: []
                   first:
                     content:
                       StringLiteral:
                         parts: []
                         end: hi
                     accessors: []
-                - operator: ~
+                - operations: []
                   first:
                     content:
                       IntegerLiteral:
