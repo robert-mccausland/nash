@@ -4,12 +4,12 @@ expression: parse(tokens).unwrap()
 ---
 statements:
   - Expression:
-      operations: []
+      operator: ~
       first:
         content:
           ExecuteExpression:
             inner:
-              operations: []
+              operator: ~
               first:
                 content:
                   CommandLiteral:

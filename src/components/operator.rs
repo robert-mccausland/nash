@@ -7,7 +7,7 @@ use crate::{
 
 use super::{errors::ExecutionError, Backtrackable, Tokens};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, PartialOrd, Ord)]
 pub enum Operator {
     LessThan,
     GreaterThan,

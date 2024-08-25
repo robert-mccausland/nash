@@ -31,15 +31,15 @@ use variable::VariableExpression;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Expression {
-    pub operations: Vec<(Operator, BaseExpression)>,
+    pub operator: Option<(Operator, BaseExpression)>,
     pub first: BaseExpression,
 }
 
 impl Expression {
-    pub fn new(first: BaseExpression, operations: Vec<(Operator, BaseExpression)>) -> Self {
+    pub fn new(first: BaseExpression, operator: Option<(Operator, BaseExpression)>) -> Self {
         Self {
             first: first.into(),
-            operations,
+            operator,
         }
     }
 
@@ -47,12 +47,13 @@ impl Expression {
         tokens: &mut Backtrackable<I>,
     ) -> Result<Expression, ParserError> {
         let expression = BaseExpression::parse(tokens)?;
-        let mut operations = Vec::new();
-        while let Some(operator) = Operator::try_parse(tokens) {
-            operations.push((operator, BaseExpression::parse(tokens)?));
-        }
+        let operator = if let Some(operator) = Operator::try_parse(tokens) {
+            Some((operator, BaseExpression::parse(tokens)?))
+        } else {
+            None
+        };
 
-        return Ok(Expression::new(expression, operations));
+        return Ok(Expression::new(expression, operator));
     }
 
     pub fn evaluate(
@@ -60,13 +61,14 @@ impl Expression {
         stack: &mut ExecutorStack,
         context: &mut ExecutorContext,
     ) -> EvaluationResult<Value> {
-        let mut result = self.first.evaluate(stack, context)?;
+        let left = self.first.evaluate(stack, context)?;
 
-        for (operator, expression) in &self.operations {
+        return Ok(if let Some((operator, expression)) = &self.operator {
             let right = expression.evaluate(stack, context)?;
-            result = operator.execute(result, right)?;
-        }
-        return Ok(result.into());
+            operator.execute(left, right)?
+        } else {
+            left.into()
+        });
     }
 }
 

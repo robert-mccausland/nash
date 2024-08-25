@@ -6,7 +6,7 @@ statements:
   - DeclarationAssignment:
       - Simple:
           value: my_variable
-      - operations: []
+      - operator: ~
         first:
           content:
             BooleanLiteral:

@@ -18,9 +18,7 @@ impl TypeDefinition {
     pub fn parse<'a, I: Iterator<Item = &'a Token<'a>>>(
         tokens: &mut Backtrackable<I>,
     ) -> Result<Self, ParserError> {
-        Ok(Self {
-            value: Self::parse_impl(tokens)?,
-        })
+        Ok(Self::parse_impl(tokens)?.into())
     }
 
     fn parse_impl<'a, I: Iterator<Item = &'a Token<'a>>>(
@@ -77,6 +75,6 @@ impl TypeDefinition {
 
 impl From<Type> for TypeDefinition {
     fn from(value: Type) -> Self {
-        TypeDefinition { value }
+        Self { value }
     }
 }
