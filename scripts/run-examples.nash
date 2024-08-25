@@ -18,8 +18,7 @@ for script in glob("./examples/*.nash") {
   out(output);
 
   if code != 0 {
-    var code = code.fmt();
-    out("Nash script exited with non-zero code (${code})");
+    out("Nash script exited with non-zero code (${code.fmt()})");
     out(output);
     out(err);
     failures.push(script);

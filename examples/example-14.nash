@@ -4,8 +4,7 @@
 
 func recurse(index: integer) {
   {
-    var index = index.fmt();
-    out("iteration ${index}");
+    out("iteration ${index.fmt()}");
   };
   index = index + 1;
   if index < 5 {
