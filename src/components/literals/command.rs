@@ -79,13 +79,13 @@ impl Evaluatable for CommandLiteral {
     fn evaluate(
         &self,
         stack: &mut ExecutorStack,
-        _context: &mut ExecutorContext,
+        context: &mut ExecutorContext,
     ) -> EvaluationResult<Value> {
         Ok(Value::Command(Command::new(
-            self.command.resolve(stack)?,
+            self.command.resolve(stack, context)?,
             self.arguments
                 .iter()
-                .map(|argument| argument.resolve(stack))
+                .map(|argument| argument.resolve(stack, context))
                 .collect::<Result<Vec<_>, _>>()?,
         ))
         .into())

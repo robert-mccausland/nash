@@ -1,0 +1,92 @@
+---
+source: src/lexer/mod.rs
+expression: "lex_code(r#\"\"test ${if true {\n            \"yes!\";\n        } else {\n            \"false!\";\n        }}!\"\"#)"
+---
+- value:
+    DoubleQuote: []
+  start: 0
+  end: 1
+- value:
+    StringLiteral: "test "
+  start: 1
+  end: 6
+- value:
+    Dollar: []
+  start: 6
+  end: 7
+- value:
+    LeftCurly: []
+  start: 7
+  end: 8
+- value:
+    Keyword: if
+  start: 8
+  end: 10
+- value:
+    Keyword: "true"
+  start: 11
+  end: 15
+- value:
+    LeftCurly: []
+  start: 16
+  end: 17
+- value:
+    DoubleQuote: []
+  start: 30
+  end: 31
+- value:
+    StringLiteral: yes!
+  start: 31
+  end: 35
+- value:
+    DoubleQuote: []
+  start: 35
+  end: 36
+- value:
+    Semicolon: []
+  start: 36
+  end: 37
+- value:
+    RightCurly: []
+  start: 46
+  end: 47
+- value:
+    Keyword: else
+  start: 48
+  end: 52
+- value:
+    LeftCurly: []
+  start: 53
+  end: 54
+- value:
+    DoubleQuote: []
+  start: 67
+  end: 68
+- value:
+    StringLiteral: false!
+  start: 68
+  end: 74
+- value:
+    DoubleQuote: []
+  start: 74
+  end: 75
+- value:
+    Semicolon: []
+  start: 75
+  end: 76
+- value:
+    RightCurly: []
+  start: 85
+  end: 86
+- value:
+    RightCurly: []
+  start: 86
+  end: 87
+- value:
+    StringLiteral: "!"
+  start: 87
+  end: 88
+- value:
+    DoubleQuote: []
+  start: 88
+  end: 89

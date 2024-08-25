@@ -1,0 +1,52 @@
+---
+source: src/lexer/mod.rs
+expression: tokens
+---
+- value:
+    DoubleQuote: []
+  start: 0
+  end: 1
+- value:
+    StringLiteral: "test "
+  start: 1
+  end: 6
+- value:
+    Dollar: []
+  start: 6
+  end: 7
+- value:
+    LeftCurly: []
+  start: 7
+  end: 8
+- value:
+    Identifier: index
+  start: 8
+  end: 13
+- value:
+    Dot: []
+  start: 13
+  end: 14
+- value:
+    Identifier: fmt
+  start: 14
+  end: 17
+- value:
+    LeftBracket: []
+  start: 17
+  end: 18
+- value:
+    RightBracket: []
+  start: 18
+  end: 19
+- value:
+    RightCurly: []
+  start: 19
+  end: 20
+- value:
+    StringLiteral: "!"
+  start: 20
+  end: 21
+- value:
+    DoubleQuote: []
+  start: 21
+  end: 22

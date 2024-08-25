@@ -131,35 +131,20 @@ impl From<TokenKind> for GetTokenResult {
 
 pub fn try_get_token(context_stack: &mut Vec<LexerContext>, current: &str) -> GetTokenResult {
     match context_stack.last_mut().unwrap() {
-        LexerContext::Root => match current {
-            HASH => {
-                context_stack.push(LexerContext::Comment);
-                GetTokenResult::Skip()
+        LexerContext::Root => default_token_matcher(context_stack, current),
+        LexerContext::TemplateExpression(depth) => {
+            if current == LEFT_CURLY {
+                *depth += 1;
+            } else if current == RIGHT_CURLY {
+                *depth -= 1;
             }
-            DOUBLE_QUOTE => {
-                context_stack.push(LexerContext::String(false));
-                TokenKind::DoubleQuote.into()
+
+            if *depth == 0 {
+                context_stack.pop();
             }
-            BACKTICK => {
-                context_stack.push(LexerContext::Command);
-                TokenKind::Backtick.into()
-            }
-            _ => {
-                if let Some(value) = TokenKind::match_simple_token(current) {
-                    value.into()
-                } else if KEYWORDS.contains(&current) {
-                    TokenKind::Keyword.into()
-                } else if matches_number(current) {
-                    TokenKind::IntegerLiteral.into()
-                } else if matches_identifier(current) {
-                    TokenKind::Identifier.into()
-                } else if is_whitespace(current) {
-                    GetTokenResult::Skip()
-                } else {
-                    GetTokenResult::NoMatch()
-                }
-            }
-        },
+
+            default_token_matcher(context_stack, current)
+        }
         LexerContext::Comment => {
             if NEWLINES.contains(&current) {
                 context_stack.pop();
@@ -179,7 +164,7 @@ pub fn try_get_token(context_stack: &mut Vec<LexerContext>, current: &str) -> Ge
                 TokenKind::DoubleQuote.into()
             } else if current == DOLLAR {
                 // Single dollar will happen when we are at the start of a template variable
-                context_stack.push(LexerContext::TemplateVariable);
+                context_stack.push(LexerContext::TemplateExpression(0));
                 TokenKind::Dollar.into()
             } else if current.ends_with(DOUBLE_QUOTE) || current.ends_with(DOLLAR) {
                 // Return no match if we encounter something indicates the literal should end
@@ -206,12 +191,30 @@ pub fn try_get_token(context_stack: &mut Vec<LexerContext>, current: &str) -> Ge
                 TokenKind::StringLiteral.into()
             }
         }
-        LexerContext::TemplateVariable => {
-            if current == LEFT_CURLY {
-                TokenKind::LeftCurly.into()
-            } else if current == RIGHT_CURLY {
-                context_stack.pop();
-                TokenKind::RightCurly.into()
+    }
+}
+
+fn default_token_matcher(context_stack: &mut Vec<LexerContext>, current: &str) -> GetTokenResult {
+    match current {
+        HASH => {
+            context_stack.push(LexerContext::Comment);
+            GetTokenResult::Skip()
+        }
+        DOUBLE_QUOTE => {
+            context_stack.push(LexerContext::String(false));
+            TokenKind::DoubleQuote.into()
+        }
+        BACKTICK => {
+            context_stack.push(LexerContext::Command);
+            TokenKind::Backtick.into()
+        }
+        _ => {
+            if let Some(value) = TokenKind::match_simple_token(current) {
+                value.into()
+            } else if KEYWORDS.contains(&current) {
+                TokenKind::Keyword.into()
+            } else if matches_number(current) {
+                TokenKind::IntegerLiteral.into()
             } else if matches_identifier(current) {
                 TokenKind::Identifier.into()
             } else if is_whitespace(current) {

@@ -27,7 +27,7 @@ enum LexerContext {
     Comment,
     String(bool),
     Command,
-    TemplateVariable,
+    TemplateExpression(u32),
 }
 
 pub fn lex<'a>(file: &'a str) -> Tokens<'a> {
@@ -138,9 +138,14 @@ mod tests {
 
     use super::*;
 
+    fn lex_code<'a>(code: &'a str) -> Vec<Token<'a>> {
+        return lex(code).collect::<Result<Vec<_>, _>>().unwrap();
+    }
+
     #[test]
     fn should_tokenize_valid_file() {
-        let test_file = r#"
+        assert_yaml_snapshot!(lex_code(
+            r#"
 # Comments are fun!
 func main() {
   var test_identifier = "Blue \"cheese\" and rice!";
@@ -150,29 +155,38 @@ func main() {
 
   exec `echo something`;
 }
-"#;
-        let tokens = lex(test_file).collect::<Result<Vec<_>, _>>().unwrap();
-        assert_yaml_snapshot!(tokens);
+"#,
+        ));
     }
 
     #[test]
     fn should_parse_empty_string() {
-        let test_file = r#"var test = "";"#;
-        let tokens = lex(test_file).collect::<Result<Vec<_>, _>>().unwrap();
-        assert_yaml_snapshot!(tokens);
+        assert_yaml_snapshot!(lex_code(r#"var test = "";"#));
     }
 
     #[test]
     fn should_parse_template_string() {
-        let test_file = r#"var test = "hello ${value}!";"#;
-        let tokens = lex(test_file).collect::<Result<Vec<_>, _>>().unwrap();
-        assert_yaml_snapshot!(tokens);
+        assert_yaml_snapshot!(lex_code(r#"var test = "hello ${value}!";"#));
     }
 
     #[test]
     fn should_parse_template_string_with_keyword_substring() {
-        let test_file = r#""${index}""#;
-        let tokens = lex(test_file).collect::<Result<Vec<_>, _>>().unwrap();
-        assert_yaml_snapshot!(tokens);
+        assert_yaml_snapshot!(lex_code(r#""${index}""#));
+    }
+
+    #[test]
+    fn should_parse_nested_expressions_in_string_literal_templates() {
+        assert_yaml_snapshot!(lex_code(r#""test ${index.fmt()}!""#));
+    }
+
+    #[test]
+    fn should_parse_multiline_nested_expressions_in_string_literal_templates() {
+        assert_yaml_snapshot!(lex_code(
+            r#""test ${if true {
+            "yes!";
+        } else {
+            "false!";
+        }}!""#,
+        ));
     }
 }

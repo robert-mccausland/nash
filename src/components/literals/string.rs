@@ -3,8 +3,8 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
     components::{
-        errors::{ExecutionError, ParserError},
-        Evaluatable, EvaluationResult, Identifier, Parsable, Tokens,
+        errors::ParserError, expressions::Expression, Evaluatable, EvaluationResult, Parsable,
+        Tokens,
     },
     executor::{ExecutorContext, ExecutorStack, Value},
     lexer::{Token, TokenValue},
@@ -13,12 +13,12 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct StringLiteral {
-    pub parts: Vec<(String, Identifier)>,
+    pub parts: Vec<(String, Expression)>,
     pub end: String,
 }
 
 impl StringLiteral {
-    pub fn new(parts: Vec<(String, Identifier)>, end: String) -> Self {
+    pub fn new(parts: Vec<(String, Expression)>, end: String) -> Self {
         Self { parts, end }
     }
 
@@ -38,13 +38,11 @@ impl StringLiteral {
                 let Some(TokenValue::LeftCurly()) = tokens.next_value() else {
                     return Err("Expected { after $ in string".into());
                 };
-                let Some(TokenValue::Identifier(value)) = tokens.next_value() else {
-                    return Err("Expected identifier after ${ in string".into());
-                };
+                let value = Expression::parse(tokens)?;
                 let Some(TokenValue::RightCurly()) = tokens.next_value() else {
                     return Err("Expected } after template variable".into());
                 };
-                variables.push((end, (*value).into()));
+                variables.push((end, value.into()));
                 end = String::new();
             } else {
                 return Err("Unable to parse string literal".into());
@@ -54,11 +52,15 @@ impl StringLiteral {
         return Ok(StringLiteral::new(variables, end));
     }
 
-    pub fn resolve(&self, stack: &mut ExecutorStack) -> Result<String, ExecutionError> {
+    pub fn resolve(
+        &self,
+        stack: &mut ExecutorStack,
+        context: &mut ExecutorContext,
+    ) -> EvaluationResult<String> {
         let mut result = String::new();
-        for (prefix, identifier) in &self.parts {
+        for (prefix, expression) in &self.parts {
             result += &prefix;
-            let Value::String(variable_value) = stack.resolve_variable(&identifier.value)? else {
+            let Value::String(variable_value) = expression.evaluate(stack, context)? else {
                 return Err("Template variable in strings must resolve to a string".into());
             };
             result += &variable_value;
@@ -99,9 +101,9 @@ impl Evaluatable for StringLiteral {
     fn evaluate(
         &self,
         stack: &mut ExecutorStack,
-        _context: &mut ExecutorContext,
+        context: &mut ExecutorContext,
     ) -> EvaluationResult<Value> {
-        Ok(Value::String(self.resolve(stack)?).into())
+        Ok(Value::String(self.resolve(stack, context)?).into())
     }
 }
 

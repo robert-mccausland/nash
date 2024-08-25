@@ -1,0 +1,9 @@
+---
+source: tests/integration_test.rs
+assertion_line: 418
+expression: "run_code(r#\"\nvar variable = 123;\nout(\"My variable is: ${variable.fmt()}!\");\n\"#)"
+---
+stdout: "My variable is: 123!\n"
+stderr: ""
+error: ~
+exit_code: 0

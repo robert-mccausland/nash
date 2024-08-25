@@ -414,4 +414,12 @@ out(test_input.fmt());
 "#,
         "my_fancy_input\r\nextra_stuff_here"
     );
+
+    nash_test!(
+        should_allow_expressions_inside_string_templates,
+        r#"
+var variable = 123;
+out("My variable is: ${variable.fmt()}!");
+"#
+    );
 }
