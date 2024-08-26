@@ -19,7 +19,6 @@ statements:
                     arguments: []
                 accessors: []
             capture_exit_code:
-              Declaration:
-                value: exit_code
+              value: exit_code
         accessors: []
 functions: []

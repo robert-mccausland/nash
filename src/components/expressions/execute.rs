@@ -2,7 +2,7 @@ use serde::Serialize;
 
 use crate::{
     components::{Evaluatable, EvaluationResult, Identifier, Parsable, Tokens},
-    constants::{EXEC, VAR},
+    constants::EXEC,
     errors::ExecutionError,
     executor::{commands::StatusCode, Value},
     lexer::TokenValue,
@@ -13,7 +13,7 @@ use super::Expression;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ExecuteExpression {
     inner: Expression,
-    capture_exit_code: Option<CaptureExitCode>,
+    capture_exit_code: Option<Identifier>,
 }
 
 impl Parsable for ExecuteExpression {
@@ -27,17 +27,13 @@ impl Parsable for ExecuteExpression {
 
             if let Some(TokenValue::Question()) = tokens.peek_value() {
                 tokens.next();
-                let token = tokens.next_value();
-                if let Some(TokenValue::Keyword(VAR)) = token {
-                    let Some(TokenValue::Identifier(identifier)) = tokens.next_value() else {
-                        return Err("var must be followed by identifier".into());
-                    };
-                    capture_exit_code = Some(CaptureExitCode::Declaration((*identifier).into()));
-                } else if let Some(TokenValue::Identifier(identifier)) = token {
-                    capture_exit_code = Some(CaptureExitCode::Assignment((*identifier).into()));
-                } else {
-                    return Err("? must be followed by an var or identifier".into());
-                }
+
+                let Some(TokenValue::Identifier(identifier)) = tokens.peek_value() else {
+                    return Err("Expected identifier after ?".into());
+                };
+                tokens.next();
+
+                capture_exit_code = Some((*identifier).into());
             }
 
             return Ok(Some(ExecuteExpression {
@@ -76,10 +72,7 @@ impl Evaluatable for ExecuteExpression {
             };
 
             match &self.capture_exit_code {
-                Some(CaptureExitCode::Assignment(identifier)) => {
-                    stack.assign_variable(&identifier.value, Value::Integer(exit_code.into()))?;
-                }
-                Some(CaptureExitCode::Declaration(identifier)) => {
+                Some(identifier) => {
                     stack.declare_and_assign_variable(
                         &identifier.value,
                         Value::Integer(exit_code.into()),
@@ -101,10 +94,4 @@ impl Evaluatable for ExecuteExpression {
 
         return Err("Value being executed must be a command".into());
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub enum CaptureExitCode {
-    Assignment(Identifier),
-    Declaration(Identifier),
 }

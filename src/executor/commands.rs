@@ -68,6 +68,12 @@ impl Command {
     }
 }
 
+impl From<&str> for Command {
+    fn from(value: &str) -> Self {
+        Command::new(value.to_owned(), Vec::new())
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum StatusCode {
     Terminated,
@@ -120,6 +126,16 @@ pub struct CommandResult {
     pub status_code: StatusCode,
     pub stdout: String,
     pub stderr: String,
+}
+
+impl CommandResult {
+    pub fn new(status_code: u8, stdout: &str, stderr: &str) -> Self {
+        Self {
+            status_code: (status_code as i32).into(),
+            stdout: stdout.to_owned(),
+            stderr: stderr.to_owned(),
+        }
+    }
 }
 
 pub trait CommandExecutor {

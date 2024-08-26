@@ -14,7 +14,7 @@ for script in glob("./examples/*.nash") {
   };
 
   out("Running script ${script}...");
-  var (output, err) = exec command ? var code;
+  var (output, err) = exec command ? code;
   out(output);
 
   if code != 0 {

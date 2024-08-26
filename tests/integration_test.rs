@@ -505,4 +505,36 @@ out((1 + 2 + 3 + 4 - 10).fmt());
 out((1 + 2 + 3 + 4 * 10).fmt());
 "#
     );
+
+    nash_test!(
+        should_error_if_command_returns_non_zero_exit_code,
+        r#"
+exec `my_command`;
+out(code.fmt());
+"#,
+        "",
+        |executor| {
+            executor
+                .expect_run()
+                .with(predicate::eq::<Command>("my_command".into()))
+                .return_once(|_| Ok(CommandResult::new(69, "", "")))
+                .once();
+        }
+    );
+
+    nash_test!(
+        should_be_able_to_capture_non_zero_exit_code_of_command,
+        r#"
+exec `my_command` ? code;
+out(code.fmt());
+"#,
+        "",
+        |executor| {
+            executor
+                .expect_run()
+                .with(predicate::eq::<Command>("my_command".into()))
+                .return_once(|_| Ok(CommandResult::new(69, "", "")))
+                .once();
+        }
+    );
 }

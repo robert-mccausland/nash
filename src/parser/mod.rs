@@ -66,7 +66,6 @@ mod tests {
             TokenValue::StringLiteral("test"),
             TokenValue::Backtick(),
             TokenValue::Question(),
-            TokenValue::Keyword(VAR),
             TokenValue::Identifier("exit_code"),
             TokenValue::Semicolon(),
         ];

@@ -1,0 +1,11 @@
+---
+source: tests/integration_test.rs
+expression: "run_code_with_setup(r#\"\nexec `my_command`;\nout(code.fmt());\n\"#, \"\",\n    |executor|\n        {\n            executor.expect_run().with(predicate::eq::<Command>(\"my_command\".into())).return_once(|_|\n                        Ok(CommandResult::new(69, \"\", \"\"))).once();\n        })"
+---
+stdout: ""
+stderr: ""
+error:
+  ExecutionError:
+    message: "Command returned non-zero exit code: (69)"
+    call_stack: []
+exit_code: 103
