@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 
-use crate::errors::ExecutionError;
+use crate::{errors::ExecutionError, Command};
 
 use super::{
     values::{Type, Value},
@@ -15,6 +15,8 @@ pub fn call_builtin(
     match (name, args) {
         ("parse_int", [Value::String(arg1)]) => Ok(Value::Integer(parse_int(arg1)?)),
         ("read", []) => read(context),
+        ("open", [Value::String(arg1)]) => open(context, arg1),
+        ("write", [Value::String(arg1)]) => write(context, arg1),
         ("err", [Value::String(arg1)]) => err(context, arg1),
         ("out", [Value::String(arg1)]) => out(context, arg1),
         ("glob", [Value::String(arg1)]) => glob(context, arg1),
@@ -93,6 +95,12 @@ fn read(context: &mut ExecutorContext) -> Result<Value, ExecutionError> {
     })?;
 
     return Ok(value.into());
+}
+fn open(_context: &mut ExecutorContext, value: &str) -> Result<Value, ExecutionError> {
+    Ok(Value::Command(Command::open(value.to_owned())))
+}
+fn write(_context: &mut ExecutorContext, value: &str) -> Result<Value, ExecutionError> {
+    Ok(Value::Command(Command::write(value.to_owned())))
 }
 
 fn out(context: &mut ExecutorContext, value: &str) -> Result<Value, ExecutionError> {

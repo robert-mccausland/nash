@@ -9,3 +9,31 @@ exec `echo test string` => `grep test`;
 var output = exec `cat nothing` => `grep cat:` ? exit_code;
 out("output: ${output}");
 out("exit code: ${exit_code.fmt()}");
+
+var input = "./examples/example-input.txt";
+var output = "./examples/example-input.txt";
+
+# TODO
+# Experimental syntax - read from file, input to cat command, 
+# capture the stderr and exit_code, pipe to another command and then pipe to a file
+# Also check out this free multi line syntax we get, way easier that bash :)
+exec open(input) 
+#  => `cat nothing`[cap err as error_message, cap exit_code] 
+  => `echo anyhow` 
+  => write(output);
+
+# The open and write methods are just builtins that instead of processing command read or write from files
+out(exec open(input));
+
+# Piping to commands should be as simple as piping a string, now that is not used for files
+out(exec "test" => `grep t`);
+
+# Cute way to write to files
+exec "test" => write(output);
+
+# Appending can just have another function 
+# (TODO)
+#exec "test" => append(output);
+
+# Clear out example file to avoid git being annoying
+exec "" => write(output);

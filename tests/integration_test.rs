@@ -566,4 +566,83 @@ out(output);
                 .once();
         }
     );
+
+    nash_test!(
+        should_be_able_to_get_input_from_file,
+        r#"
+exec open("file") => `command1`;
+"#,
+        "",
+        |executor| {
+            executor
+                .expect_run()
+                .with(predicate::eq::<Command>(
+                    Command::open("file".to_owned())
+                        .pipe("command1".into())
+                        .unwrap(),
+                ))
+                .return_once(|_| Ok(CommandResult::new(0, "")))
+                .once();
+        }
+    );
+
+    nash_test!(
+        should_be_able_to_write_input_to_file,
+        r#"
+exec `command1` => write("file");
+"#,
+        "",
+        |executor| {
+            executor
+                .expect_run()
+                .with(predicate::eq::<Command>(
+                    Into::<Command>::into("command1")
+                        .pipe(Command::write("file".to_owned()))
+                        .unwrap(),
+                ))
+                .return_once(|_| Ok(CommandResult::new(0, "")))
+                .once();
+        }
+    );
+
+    nash_test!(
+        should_not_be_able_to_pipe_from_write,
+        r#"
+write("test") => `command`;
+"#
+    );
+
+    nash_test!(
+        should_not_be_able_to_pipe_to_open,
+        r#"
+`command` => open("test");
+"#
+    );
+
+    nash_test!(
+        should_not_be_able_to_pipe_to_literal,
+        r#"
+`command` => "test";
+"#
+    );
+
+    nash_test!(
+        should_be_able_to_pipe_literal_to_command,
+        r#"
+var input = "input string";
+exec input => `command`;
+"#,
+        "",
+        |executor| {
+            executor
+                .expect_run()
+                .with(predicate::eq::<Command>(
+                    Command::literal("input string".to_owned())
+                        .pipe("command".into())
+                        .unwrap(),
+                ))
+                .return_once(|_| Ok(CommandResult::new(0, "")))
+                .once();
+        }
+    );
 }

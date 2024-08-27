@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code_with_setup(r#\"\nvar input = \"input string\";\nexec input => `command`;\n\"#,\n    \"\",\n    |executor|\n        {\n            executor.expect_run().with(predicate::eq::<Command>(Command::literal(\"input string\".to_owned()).pipe(\"command\".into()).unwrap())).return_once(|_|\n                        Ok(CommandResult::new(0, \"\"))).once();\n        })"
+---
+stdout: ""
+stderr: ""
+error: ~
+exit_code: 0

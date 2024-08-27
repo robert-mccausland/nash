@@ -3,7 +3,7 @@ use serde::Serialize;
 use crate::{
     executor::Value,
     lexer::{Token, TokenValue},
-    ParserError,
+    Command, ParserError,
 };
 
 use super::{errors::ExecutionError, Backtrackable, Tokens};
@@ -87,6 +87,9 @@ impl Operator {
             (LessThanOrEqual, Integer(left), Integer(right)) => Ok((left <= right).into()),
             (GreaterThanOrEqual, Integer(left), Integer(right)) => Ok((left >= right).into()),
             (Arrow, Command(left), Command(right)) => Ok(Command(left.pipe(right)?)),
+            (Arrow, String(left), Command(right)) => {
+                Ok(Command(crate::Command::literal(left).pipe(right)?))
+            }
             (And, Boolean(left), Boolean(right)) => Ok((left && right).into()),
             (Or, Boolean(left), Boolean(right)) => Ok((left || right).into()),
             (operator, left, right) => {

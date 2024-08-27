@@ -1,0 +1,11 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nwrite(\"test\") => `command`;\n\"#)"
+---
+stdout: ""
+stderr: ""
+error:
+  ExecutionError:
+    message: Cannot pipe from command with a destination
+    call_stack: []
+exit_code: 103

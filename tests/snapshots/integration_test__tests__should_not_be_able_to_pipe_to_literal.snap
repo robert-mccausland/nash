@@ -1,0 +1,11 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\n`command` => \"test\";\n\"#)"
+---
+stdout: ""
+stderr: ""
+error:
+  ExecutionError:
+    message: "Invalid operator expression Command(Command { commands: [(\"command\", [])], source: None, destination_file: None }) Arrow String(\"test\")."
+    call_stack: []
+exit_code: 103
