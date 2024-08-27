@@ -3,7 +3,7 @@ use serde::Serialize;
 use crate::{
     executor::Value,
     lexer::{Token, TokenValue},
-    Command, ParserError,
+    ParserError,
 };
 
 use super::{errors::ExecutionError, Backtrackable, Tokens};

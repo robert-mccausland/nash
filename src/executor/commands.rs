@@ -1,7 +1,7 @@
 use std::{
     fmt::Display,
     fs::File,
-    io::{self, Read, Stdin},
+    io::{self, Read},
     process::{self, ChildStdout, Stdio},
 };
 
