@@ -2,5 +2,5 @@
 
 var output_file = "downloaded_file.txt";
 
-# TODO - way to capture the stderr of a command
+# TODO - way to capture the stderr of a command & pipe to file
 exec `curl https://example.com/file.txt`;

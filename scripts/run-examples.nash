@@ -14,13 +14,12 @@ for script in glob("./examples/*.nash") {
   };
 
   out("Running script ${script}...");
-  var (output, err) = exec command ? code;
+  var output = exec command ? code;
   out(output);
 
   if code != 0 {
     out("Nash script exited with non-zero code (${code.fmt()})");
     out(output);
-    out(err);
     failures.push(script);
   } else {
     out("Nash script ${script} succeeded");
