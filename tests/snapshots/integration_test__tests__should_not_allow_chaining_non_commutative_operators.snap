@@ -6,6 +6,6 @@ stdout: ""
 stderr: ""
 error:
   ExecutionError:
-    message: Chaining Addition with Multiplication is not supported because they do no commute.
+    message: Chaining Addition with Multiplication is not supported.
     call_stack: []
 exit_code: 103

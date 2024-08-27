@@ -1,0 +1,11 @@
+#!/bin/nash
+
+# Piping
+
+# Pipe stdout into another command - stderr still goes to console
+exec `echo test string` => `grep test`;
+
+# Pipe into another command - stderr still gets output and error code will be the first non zero one
+var output = exec `cat nothing` => `grep cat:` ? exit_code;
+out("output: ${output}");
+out("exit code: ${exit_code.fmt()}");

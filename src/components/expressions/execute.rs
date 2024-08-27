@@ -62,13 +62,7 @@ impl Evaluatable for ExecuteExpression {
 
             let (return_value, exit_code) = match result.status_code {
                 StatusCode::Terminated => return Err(format!("Command was terminated").into()),
-                StatusCode::Value(code) => (
-                    Value::Tuple(vec![
-                        Value::String(result.stdout),
-                        Value::String(result.stderr),
-                    ]),
-                    code,
-                ),
+                StatusCode::Value(code) => (Value::String(result.stdout), code),
             };
 
             match &self.capture_exit_code {

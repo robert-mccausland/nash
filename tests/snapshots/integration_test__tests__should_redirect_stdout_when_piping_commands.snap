@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code_with_setup(r#\"\nexec `command1` => `command2`;\n\"#, \"\",\n    |executor|\n        {\n            executor.expect_run().with(predicate::eq::<Command>(Into::<Command>::into(\"command1\").pipe(\"command2\".into()).unwrap())).return_once(|_|\n                        Ok(CommandResult::new(0, \"\"))).once();\n        })"
+---
+stdout: ""
+stderr: ""
+error: ~
+exit_code: 0

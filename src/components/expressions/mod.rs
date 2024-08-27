@@ -1,5 +1,3 @@
-use std::io::prelude;
-
 use crate::{
     executor::{ExecutorContext, ExecutorStack, Value},
     lexer::{Token, TokenValue},
@@ -50,7 +48,7 @@ impl Expression {
     ) -> Result<Expression, ParserError> {
         let expression = BaseExpression::parse(tokens)?;
         let mut operations = Vec::new();
-        while let Some(operator) = Operator::try_parse(tokens) {
+        while let Some(operator) = Operator::try_parse(tokens)? {
             operations.push((operator, BaseExpression::parse(tokens)?));
         }
 
@@ -68,8 +66,10 @@ impl Expression {
         for (operator, expression) in &self.operations {
             let right = expression.evaluate(stack, context)?;
             if let Some(previous) = previous {
-                if !previous.commutes_with(operator) {
-                    return Err(format!("Chaining {previous:?} with {operator:?} is not supported because they do no commute."))?;
+                if !previous.chains_with(operator) {
+                    return Err(format!(
+                        "Chaining {previous:?} with {operator:?} is not supported."
+                    ))?;
                 }
             }
 

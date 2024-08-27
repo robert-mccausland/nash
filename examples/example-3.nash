@@ -1,5 +1,6 @@
 #!/bin/nash
 
 var output_file = "downloaded_file.txt";
-var (_, err) = exec `curl https://example.com/file.txt`;
-out(err);
+
+# TODO - way to capture the stderr of a command
+exec `curl https://example.com/file.txt`;

@@ -110,13 +110,7 @@ main();
                     "echo".to_owned(),
                     vec!["something".to_owned()],
                 )))
-                .return_once(|_| {
-                    Ok(CommandResult {
-                        status_code: 0.into(),
-                        stdout: "something".to_owned(),
-                        stderr: "".to_owned(),
-                    })
-                })
+                .return_once(|_| Ok(CommandResult::new(0, "something")))
                 .once();
         }
     );
@@ -517,7 +511,7 @@ out(code.fmt());
             executor
                 .expect_run()
                 .with(predicate::eq::<Command>("my_command".into()))
-                .return_once(|_| Ok(CommandResult::new(69, "", "")))
+                .return_once(|_| Ok(CommandResult::new(69, "")))
                 .once();
         }
     );
@@ -533,7 +527,42 @@ out(code.fmt());
             executor
                 .expect_run()
                 .with(predicate::eq::<Command>("my_command".into()))
-                .return_once(|_| Ok(CommandResult::new(69, "", "")))
+                .return_once(|_| Ok(CommandResult::new(69, "")))
+                .once();
+        }
+    );
+
+    nash_test!(
+        should_redirect_stdout_when_piping_commands,
+        r#"
+exec `command1` => `command2`;
+"#,
+        "",
+        |executor| {
+            executor
+                .expect_run()
+                .with(predicate::eq::<Command>(
+                    Into::<Command>::into("command1")
+                        .pipe("command2".into())
+                        .unwrap(),
+                ))
+                .return_once(|_| Ok(CommandResult::new(0, "")))
+                .once();
+        }
+    );
+
+    nash_test!(
+        should_capture_output_of_command_in_variable,
+        r#"
+var output = exec `command1`;
+out(output);
+"#,
+        "",
+        |executor| {
+            executor
+                .expect_run()
+                .with(predicate::eq::<Command>("command1".into()))
+                .return_once(|_| Ok(CommandResult::new(0, "hello!")))
                 .once();
         }
     );
