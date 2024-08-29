@@ -5,16 +5,15 @@ var failures = [""];
 failures.pop();
 
 for script in glob("./examples/*.nash") {
-
-  var command = `nash "${script}"`;
+  var input = "";
 
   # This script requires user input...
   if script.ends_with("example-21.nash") {
-    command = `echo test_input` => command;
+    input = "test input";
   };
 
   out("Running script ${script}...");
-  var output = exec command ? code;
+  var output = exec input => `nash "${script}"`[cap exit_code as code];
   out(output);
 
   if code != 0 {

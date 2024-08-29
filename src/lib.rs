@@ -2,7 +2,10 @@ use std::fmt::{Error, Write};
 use std::io::Read;
 
 pub use errors::{ExecutionError, LexerError, NashError, ParserError};
-pub use executor::commands::{Command, CommandExecutor, CommandResult, SystemCommandExecutor};
+pub use executor::commands::{
+    CommandDefinition, CommandExecutor, Pipeline, PipelineDestination, PipelineExecutionOptions,
+    PipelineResult, PipelineSource, SystemCommandExecutor,
+};
 pub use executor::ExecutionOutput;
 pub use executor::{Executor, ExecutorOptions};
 

@@ -1,156 +1,97 @@
 use std::{
-    fmt::Display,
-    fs::File,
+    fs::{File, OpenOptions},
     io::{self, Read},
     process::{self, ChildStdout, Stdio},
 };
 
-use crate::ExecutionError;
+use serde::Serialize;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Command {
-    commands: Vec<(String, Vec<String>)>,
-    source: Option<CommandSource>,
-    destination_file: Option<String>,
+pub struct CommandDefinition {
+    pub program: String,
+    pub arguments: Vec<String>,
+    pub capture_stderr: bool,
+}
+
+impl CommandDefinition {
+    pub fn new(program: String, arguments: Vec<String>, capture_stderr: bool) -> Self {
+        Self {
+            program,
+            arguments,
+            capture_stderr,
+        }
+    }
+}
+
+impl From<&str> for CommandDefinition {
+    fn from(value: &str) -> Self {
+        Self::new(value.to_owned(), Vec::new(), false)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum CommandSource {
+pub struct Pipeline {
+    pub commands: Vec<CommandDefinition>,
+    pub source: Option<PipelineSource>,
+    pub destination: Option<PipelineDestination>,
+}
+
+impl Pipeline {
+    pub fn new(
+        commands: Vec<CommandDefinition>,
+        source: Option<PipelineSource>,
+        destination: Option<PipelineDestination>,
+    ) -> Self {
+        Self {
+            commands,
+            source,
+            destination,
+        }
+    }
+}
+
+impl<'a, I: IntoIterator<Item = &'a str>> From<I> for Pipeline {
+    fn from(value: I) -> Self {
+        Pipeline::new(
+            value
+                .into_iter()
+                .map(|command| (*command).into())
+                .collect::<Vec<_>>(),
+            None,
+            None,
+        )
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub enum PipelineSource {
     File(String),
     Literal(String),
 }
 
-impl Command {
-    pub fn new(command: String, arguments: Vec<String>) -> Self {
-        Self {
-            commands: vec![(command, arguments)],
-            source: None,
-            destination_file: None,
-        }
-    }
-
-    pub fn open(path: String) -> Self {
-        Self {
-            commands: vec![],
-            source: Some(CommandSource::File(path)),
-            destination_file: None,
-        }
-    }
-
-    pub fn literal(value: String) -> Self {
-        Self {
-            commands: vec![],
-            source: Some(CommandSource::Literal(value)),
-            destination_file: None,
-        }
-    }
-
-    pub fn write(path: String) -> Self {
-        Self {
-            commands: vec![],
-            source: None,
-            destination_file: Some(path),
-        }
-    }
-
-    pub fn pipe(&self, mut next: Command) -> Result<Self, ExecutionError> {
-        if next.source.is_some() {
-            return Err("Cannot pipe to command with a source".into());
-        }
-        if self.destination_file.is_some() {
-            return Err("Cannot pipe from command with a destination".into());
-        }
-
-        let mut result = self.clone();
-        result.commands.append(&mut next.commands);
-        result.destination_file = result.destination_file;
-        Ok(result)
-    }
-}
-
-impl From<&str> for Command {
-    fn from(value: &str) -> Self {
-        Command::new(value.to_owned(), Vec::new())
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum StatusCode {
-    Terminated,
-    Value(u8),
-}
-
-impl From<i32> for StatusCode {
-    fn from(value: i32) -> Self {
-        Self::Value(value.to_le_bytes()[0])
-    }
-}
-
-impl From<Option<i32>> for StatusCode {
-    fn from(value: Option<i32>) -> Self {
-        match value {
-            None => Self::Terminated,
-            Some(x) => x.into(),
-        }
-    }
-}
-
-impl Display for Command {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(source) = &self.source {
-            match source {
-                CommandSource::File(path) => {
-                    f.write_str("open(")?;
-                    path.fmt(f)?;
-                    f.write_str(")")?;
-                }
-                CommandSource::Literal(literal) => literal.fmt(f)?,
-            }
-        }
-
-        let mut first = true;
-        for (command, args) in &self.commands {
-            if first && self.source.is_none() {
-                first = false;
-            } else {
-                f.write_str(" => ")?;
-            }
-
-            f.write_str(command)?;
-            for arg in args {
-                f.write_str(" ")?;
-                f.write_str("\"")?;
-                f.write_str(arg)?;
-                f.write_str("\"")?;
-            }
-        }
-        if let Some(destination) = &self.destination_file {
-            f.write_str(" => write(")?;
-            destination.fmt(f)?;
-            f.write_str(")")?;
-        }
-
-        Ok(())
-    }
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub enum PipelineDestination {
+    FileWrite(String),
+    FileAppend(String),
 }
 
 #[derive(Debug, Clone)]
-pub struct CommandResult {
+pub struct PipelineResult {
     pub stdout: String,
-    pub status_code: StatusCode,
+    pub command_outputs: Vec<(u8, String)>,
 }
 
-impl CommandResult {
-    pub fn new(status_code: u8, stdout: &str) -> Self {
+impl PipelineResult {
+    pub fn new(stdout: String, command_outputs: Vec<(u8, String)>) -> Self {
         Self {
-            stdout: stdout.to_owned(),
-            status_code: (status_code as i32).into(),
+            stdout,
+            command_outputs,
         }
     }
 }
 
 pub trait CommandExecutor {
-    fn run(&self, command: &Command) -> io::Result<CommandResult>;
+    fn run(&self, command: &Pipeline) -> io::Result<PipelineResult>;
 }
 
 pub struct SystemCommandExecutor;
@@ -218,21 +159,30 @@ impl DataSource {
     }
 }
 
+pub struct PipelineExecutionOptions {
+    pub command_options: Vec<CommandExecutionOptions>,
+}
+
+#[derive(Clone)]
+pub struct CommandExecutionOptions {
+    pub capture_stderr: bool,
+}
+
 impl CommandExecutor for SystemCommandExecutor {
-    fn run(&self, command: &Command) -> io::Result<CommandResult> {
+    fn run(&self, pipeline: &Pipeline) -> io::Result<PipelineResult> {
         let mut processes = Vec::new();
-        let mut input = if let Some(source) = &command.source {
+        let mut input = if let Some(source) = &pipeline.source {
             match source {
-                CommandSource::File(file) => DataSource::File(File::open(file)?),
-                CommandSource::Literal(literal) => DataSource::Literal(literal.to_owned()),
+                PipelineSource::File(file) => DataSource::File(File::open(file)?),
+                PipelineSource::Literal(literal) => DataSource::Literal(literal.to_owned()),
             }
         } else {
             DataSource::Null()
         };
 
-        for (command, arguments) in &command.commands {
-            let mut process = process::Command::new(command.to_owned());
-            process.args(arguments.to_owned());
+        for command in &pipeline.commands {
+            let mut process = process::Command::new(command.program.to_owned());
+            process.args(command.arguments.to_owned());
             let input_string = match input.to_stdio() {
                 StdioOrString::Stdio(input) => {
                     process.stdin(input);
@@ -245,6 +195,10 @@ impl CommandExecutor for SystemCommandExecutor {
             };
             process.stdout(Stdio::piped());
 
+            if command.capture_stderr {
+                process.stderr(Stdio::piped());
+            }
+
             let mut process = process.spawn()?;
             let stdout = process.stdout.take().unwrap();
 
@@ -255,31 +209,43 @@ impl CommandExecutor for SystemCommandExecutor {
                 )?;
             }
 
-            processes.push(process);
+            let stderr = process.stderr.take();
+            processes.push((process, stderr));
 
             input = DataSource::ChildStdout(stdout);
         }
 
-        let mut status_code = StatusCode::Value(0);
-        for process in &mut processes {
-            let result = process.wait()?;
-
-            // Only update status code if all previous commands were successful
-            if matches!(status_code, StatusCode::Value(0)) {
-                status_code = result.code().into();
+        let mut outputs = Vec::new();
+        for (process, stderr) in &mut processes {
+            let status = process.wait()?;
+            let mut stderr_data = String::new();
+            if let Some(stderr) = stderr {
+                stderr.read_to_string(&mut stderr_data)?;
             }
+
+            outputs.push((
+                status
+                    .code()
+                    .ok_or(io::Error::other("Unable to get exit code for command"))?
+                    .try_into()
+                    .map_err(|_| io::Error::other("Exit code was not between 0 and 255"))?,
+                stderr_data,
+            ));
         }
 
-        let stdout = if let Some(destination) = &command.destination_file {
-            input.read_to_file(File::create(destination)?)?;
+        let stdout = if let Some(destination) = &pipeline.destination {
+            let file = match destination {
+                PipelineDestination::FileWrite(path) => File::create(path)?,
+                PipelineDestination::FileAppend(path) => {
+                    OpenOptions::new().append(true).open(path)?
+                }
+            };
+            input.read_to_file(file)?;
             String::new()
         } else {
             input.read_to_string()?
         };
 
-        return Ok(CommandResult {
-            stdout,
-            status_code,
-        });
+        return Ok(PipelineResult::new(stdout, outputs));
     }
 }

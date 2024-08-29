@@ -8,8 +8,8 @@ mod block;
 mod brackets;
 mod branch;
 mod collections;
-mod execute;
 mod loops;
+mod pipeline;
 mod variable;
 
 use super::{
@@ -24,8 +24,8 @@ use block::BlockExpression;
 use brackets::BracketExpression;
 use branch::BranchExpression;
 use collections::{ArrayExpression, TupleExpression};
-use execute::ExecuteExpression;
 use loops::{ForLoopExpression, WhileLoopExpression};
+use pipeline::PipelineExpression;
 use serde::Serialize;
 use variable::VariableExpression;
 
@@ -212,7 +212,7 @@ expression_content!([
     BracketExpression,
     TupleExpression,
     VariableExpression,
-    ExecuteExpression,
+    PipelineExpression,
     WhileLoopExpression,
     ForLoopExpression,
     BranchExpression,

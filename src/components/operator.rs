@@ -21,7 +21,6 @@ pub enum Operator {
     LessThan,
     GreaterThanOrEqual,
     LessThanOrEqual,
-    Arrow,
     And,
     Or,
 }
@@ -60,7 +59,6 @@ impl Operator {
         match_tokens!([LeftAngle, Equals] => LessThanOrEqual);
         match_tokens!([RightAngle] => GreaterThan);
         match_tokens!([RightAngle, Equals] => GreaterThanOrEqual);
-        match_tokens!([Equals, RightAngle] => Arrow);
         match_tokens!([Equals, Equals] => Equal);
         match_tokens!([Bang, Equals] => NotEqual);
         match_tokens!([And, And] => And);
@@ -86,10 +84,10 @@ impl Operator {
             (GreaterThan, Integer(left), Integer(right)) => Ok((left > right).into()),
             (LessThanOrEqual, Integer(left), Integer(right)) => Ok((left <= right).into()),
             (GreaterThanOrEqual, Integer(left), Integer(right)) => Ok((left >= right).into()),
-            (Arrow, Command(left), Command(right)) => Ok(Command(left.pipe(right)?)),
-            (Arrow, String(left), Command(right)) => {
-                Ok(Command(crate::Command::literal(left).pipe(right)?))
-            }
+            // (Arrow, Command(left), Command(right)) => Ok(Command(left.pipe(right)?)),
+            // (Arrow, String(left), Command(right)) => {
+            //     Ok(Command(crate::Pipeline::literal(left).pipe(right)?))
+            // }
             (And, Boolean(left), Boolean(right)) => Ok((left && right).into()),
             (Or, Boolean(left), Boolean(right)) => Ok((left || right).into()),
             (operator, left, right) => {
@@ -110,7 +108,6 @@ impl Operator {
         return_true_if_match!(Self::Multiplication);
         return_true_if_match!(Self::Addition | Self::Subtraction);
         return_true_if_match!(Self::And | Self::Or);
-        return_true_if_match!(Self::Arrow);
 
         return false;
     }

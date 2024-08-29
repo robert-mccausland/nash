@@ -4,8 +4,6 @@ use serde::Serialize;
 
 use crate::{utils::formatting::fmt_collection, ExecutionError};
 
-use super::commands;
-
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum Value {
     #[default]
@@ -13,9 +11,17 @@ pub enum Value {
     String(String),
     Integer(i32),
     Boolean(bool),
-    Command(commands::Command),
+    Command(String, Vec<String>),
     Array(Rc<RefCell<Vec<Value>>>, Type),
     Tuple(Vec<Value>),
+    FileHandle(String, FileMode),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FileMode {
+    Open,
+    Write,
+    Append,
 }
 
 impl Value {
@@ -25,11 +31,12 @@ impl Value {
             Value::String(_) => Type::String,
             Value::Integer(_) => Type::Integer,
             Value::Boolean(_) => Type::Boolean,
-            Value::Command(_) => Type::Command,
+            Value::Command(_, _) => Type::Command,
             Value::Array(_, value_type) => Type::Array(value_type.clone().into()),
             Value::Tuple(values) => {
                 Type::Tuple(values.iter().map(|x| x.get_type()).collect::<Vec<_>>())
             }
+            Value::FileHandle(_, _) => Type::FileHandle,
         }
     }
 
@@ -64,9 +71,13 @@ impl Display for Value {
             }
             Value::Integer(data) => data.fmt(f)?,
             Value::Boolean(data) => data.fmt(f)?,
-            Value::Command(data) => data.fmt(f)?,
+            Value::Command(program, arguments) => {
+                let combined = Some(program).into_iter().chain(arguments.iter());
+                fmt_collection("`", " ", "`", combined, f)?
+            }
             Value::Array(data, _) => fmt_collection("[", ",", "]", data.borrow().iter(), f)?,
             Value::Tuple(data) => fmt_collection("(", ",", ")", data.iter(), f)?,
+            Value::FileHandle(_, _) => f.write_str("file_handle")?,
         };
 
         return Ok(());
@@ -91,12 +102,6 @@ impl From<bool> for Value {
     }
 }
 
-impl From<commands::Command> for Value {
-    fn from(value: commands::Command) -> Self {
-        Value::Command(value)
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum Type {
     Void,
@@ -106,6 +111,7 @@ pub enum Type {
     Command,
     Array(Box<Type>),
     Tuple(Vec<Type>),
+    FileHandle,
 }
 
 impl Display for Type {
@@ -124,6 +130,7 @@ impl Display for Type {
                 Ok(())
             }
             Type::Tuple(item_types) => fmt_collection("(", ",", ")", item_types.iter(), f),
+            Type::FileHandle => f.write_str("file_handle"),
         }
     }
 }

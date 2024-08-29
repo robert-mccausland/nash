@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nexec[cap 0.err as stderr] `my_command`;\nout(stderr.fmt());\n\"#,\n    \"\",\n    |executor|\n        {\n            executor.expect_run().with(predicate::eq::<Pipeline>(\"my_command\".into()),\n                        predicate::always()).return_once(|_, _|\n                        {\n                            Ok(PipelineResult::new(String::new(),\n                                    vec![(0, \"Something in stderr!\".to_owned())]))\n                        }).once();\n        })"
+---
+stdout: "\"Something in stderr!\"\n"
+stderr: ""
+error: ~
+exit_code: 0

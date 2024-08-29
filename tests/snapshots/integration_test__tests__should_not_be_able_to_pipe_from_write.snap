@@ -1,11 +1,11 @@
 ---
 source: tests/integration_test.rs
-expression: "run_code(r#\"\nwrite(\"test\") => `command`;\n\"#)"
+expression: "run_code(r#\"\nexec write(\"test\") => `command`;\n\"#, \"\", |_| {})"
 ---
 stdout: ""
 stderr: ""
 error:
   ExecutionError:
-    message: Cannot pipe from command with a destination
+    message: File must be in open mode to be used as data source
     call_stack: []
 exit_code: 103

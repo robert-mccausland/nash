@@ -60,6 +60,21 @@ impl From<&str> for Identifier {
     }
 }
 
+impl Parsable for Identifier {
+    fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
+        tokens: &mut Backtrackable<I>,
+    ) -> Result<Option<Self>, ParserError> {
+        Ok(
+            if let Some(TokenValue::Identifier(value)) = tokens.peek_value() {
+                tokens.next();
+                Some((*value).into())
+            } else {
+                None
+            },
+        )
+    }
+}
+
 trait Parsable
 where
     Self: Sized,

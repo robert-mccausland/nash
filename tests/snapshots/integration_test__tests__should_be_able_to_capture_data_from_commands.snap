@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\nexec `command1`[\n    cap exit_code, \n    cap stderr\n] => `command2`[\n    cap exit_code as exit_code_2, \n    cap stderr as stderr_2\n];\n\nout((exit_code, stderr, exit_code_2, stderr_2).fmt());\n\"#,\n    \"\",\n    |executor|\n        {\n            executor.expect_run().with(predicate::eq::<Pipeline>(Pipeline::new(vec![CommandDefinition::new(\"command1\".to_owned(),\n                                    Vec::new(), true),\n                                    CommandDefinition::new(\"command2\".to_owned(), Vec::new(),\n                                    true),], None,\n                                None))).return_once(|_|\n                        {\n                            Ok(PipelineResult {\n                                    command_outputs: vec![(69,\n                                        \"from_command_1_stderr\".to_owned()),\n                                        (70, \"from_command_2_stderr\".to_owned()),],\n                                    stdout: \"\".to_owned(),\n                                })\n                        }).once();\n        })"
+---
+stdout: "(69,\"from_command_1_stderr\",70,\"from_command_2_stderr\")\n"
+stderr: ""
+error: ~
+exit_code: 0

@@ -2,7 +2,7 @@ use serde::Serialize;
 
 use crate::{
     components::{errors::ParserError, Evaluatable, EvaluationResult, Parsable, Tokens},
-    executor::{commands::Command, ExecutorContext, ExecutorStack, Value},
+    executor::{ExecutorContext, ExecutorStack, Value},
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
 };
@@ -81,13 +81,14 @@ impl Evaluatable for CommandLiteral {
         stack: &mut ExecutorStack,
         context: &mut ExecutorContext,
     ) -> EvaluationResult<Value> {
-        Ok(Value::Command(Command::new(
+        let result = Value::Command(
             self.command.resolve(stack, context)?,
             self.arguments
                 .iter()
                 .map(|argument| argument.resolve(stack, context))
                 .collect::<Result<Vec<_>, _>>()?,
-        ))
-        .into())
+        );
+
+        return Ok(result);
     }
 }

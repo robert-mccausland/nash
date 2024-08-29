@@ -1,0 +1,27 @@
+#!/bin/nash
+
+# Piping with files
+
+var input = "./examples/example-input.txt";
+var output = "./examples/example-input.txt";
+
+# We can use files as the first or last command in a chain (but never the middle)
+exec open(input) => `echo anyhow` => write(output);
+
+# The open and write methods are just builtins that instead of processing command read or write from files
+out(exec open(input));
+
+# Piping directly to commands should be as simple as piping a string, now that is not used for files
+out(exec "test" => `grep t`);
+
+# Cute way to write to files
+exec "test" => write(output);
+
+# Appending can just have another function 
+exec "append me !" => append(output);
+exec "append me !" => append(output);
+exec "append me !" => append(output);
+out(exec open(output));
+
+# Clear out example file to avoid git being annoying
+exec "" => write(output);

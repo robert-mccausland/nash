@@ -1,0 +1,21 @@
+#!/bin/nash
+
+# More on Capturing extra info from commands
+
+var input = "./examples/example-input.txt";
+var output = "./examples/example-input.txt";
+
+exec
+  open(input)
+    => `cat nothing`[cap stderr as error_message, cap exit_code] 
+    => `echo anyhow`[cap exit_code as echo_exit_code]
+    => write(output);
+
+out("Capturing stuff");
+out(exec open(output));
+out("Stderr: ${error_message}");
+out("Cat Exit Code: ${exit_code.fmt()}");
+out("Echo Exit Code: ${echo_exit_code.fmt()}");
+
+# Clear out example file to avoid git being annoying
+exec "" => write(output);

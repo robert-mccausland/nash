@@ -1,4 +1,4 @@
 #!/bin/nash
 
-exec `curl nope` ? exit_code;
+exec `curl nope`[cap exit_code];
 out(exit_code.fmt());

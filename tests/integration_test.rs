@@ -10,7 +10,7 @@ mod tests {
         pub CommandExecutor {}
 
         impl CommandExecutor for CommandExecutor {
-            fn run(&self, command: &Command) -> IoResult<CommandResult>;
+            fn run(&self, command: &Pipeline) -> IoResult<PipelineResult>;
         }
     }
 
@@ -22,11 +22,7 @@ mod tests {
         exit_code: u8,
     }
 
-    fn run_code(script: &str) -> CodeOutput {
-        run_code_with_setup(script, "", |_| {})
-    }
-
-    fn run_code_with_setup<F: FnOnce(&mut MockCommandExecutor)>(
+    fn run_code<F: FnOnce(&mut MockCommandExecutor)>(
         script: &str,
         input: &str,
         setup: F,
@@ -64,25 +60,29 @@ mod tests {
         };
     }
 
+    fn pipeline_success(stdout: &str, length: usize) -> PipelineResult {
+        PipelineResult::new(stdout.to_owned(), vec![(0, String::new()); length])
+    }
+
     macro_rules! nash_test {
         ($name:ident, $code:expr) => {
             #[test]
             fn $name() {
-                assert_yaml_snapshot!(run_code($code));
+                assert_yaml_snapshot!(run_code($code, "", |_| {}));
             }
         };
 
         ($name:ident, $code:expr, $input:expr) => {
             #[test]
             fn $name() {
-                assert_yaml_snapshot!(run_code_with_setup($code, $input, |_| {}));
+                assert_yaml_snapshot!(run_code($code, $input, |_| {}));
             }
         };
 
         ($name:ident, $code:expr, $input:expr, $setup:expr) => {
             #[test]
             fn $name() {
-                assert_yaml_snapshot!(run_code_with_setup($code, $input, $setup));
+                assert_yaml_snapshot!(run_code($code, $input, $setup));
             }
         };
     }
@@ -106,11 +106,16 @@ main();
         |mock_command_executor| {
             mock_command_executor
                 .expect_run()
-                .with(predicate::eq(Command::new(
-                    "echo".to_owned(),
-                    vec!["something".to_owned()],
+                .with(predicate::eq(Pipeline::new(
+                    vec![CommandDefinition::new(
+                        "echo".to_owned(),
+                        vec!["something".to_owned()],
+                        false,
+                    )],
+                    None,
+                    None,
                 )))
-                .return_once(|_| Ok(CommandResult::new(0, "something")))
+                .return_once(|_| Ok(pipeline_success("something", 1)))
                 .once();
         }
     );
@@ -510,8 +515,13 @@ out(code.fmt());
         |executor| {
             executor
                 .expect_run()
-                .with(predicate::eq::<Command>("my_command".into()))
-                .return_once(|_| Ok(CommandResult::new(69, "")))
+                .with(predicate::eq::<Pipeline>(["my_command"].into()))
+                .return_once(|_| {
+                    Ok(PipelineResult::new(
+                        String::new(),
+                        vec![(69, String::new())],
+                    ))
+                })
                 .once();
         }
     );
@@ -519,15 +529,49 @@ out(code.fmt());
     nash_test!(
         should_be_able_to_capture_non_zero_exit_code_of_command,
         r#"
-exec `my_command` ? code;
+exec `my_command`[cap exit_code as code];
 out(code.fmt());
 "#,
         "",
         |executor| {
             executor
                 .expect_run()
-                .with(predicate::eq::<Command>("my_command".into()))
-                .return_once(|_| Ok(CommandResult::new(69, "")))
+                .with(predicate::eq::<Pipeline>(["my_command"].into()))
+                .return_once(|_| {
+                    Ok(PipelineResult::new(
+                        String::new(),
+                        vec![(69, String::new())],
+                    ))
+                })
+                .once();
+        }
+    );
+
+    nash_test!(
+        should_be_able_to_capture_stderr_from_command,
+        r#"
+exec `my_command`[cap stderr as stderr];
+out(stderr.fmt());
+"#,
+        "",
+        |executor| {
+            executor
+                .expect_run()
+                .with(predicate::eq::<Pipeline>(Pipeline::new(
+                    vec![CommandDefinition::new(
+                        "my_command".to_owned(),
+                        Vec::new(),
+                        true,
+                    )],
+                    None,
+                    None,
+                )))
+                .return_once(|_| {
+                    Ok(PipelineResult::new(
+                        String::new(),
+                        vec![(0, "Something in stderr!".to_owned())],
+                    ))
+                })
                 .once();
         }
     );
@@ -541,12 +585,8 @@ exec `command1` => `command2`;
         |executor| {
             executor
                 .expect_run()
-                .with(predicate::eq::<Command>(
-                    Into::<Command>::into("command1")
-                        .pipe("command2".into())
-                        .unwrap(),
-                ))
-                .return_once(|_| Ok(CommandResult::new(0, "")))
+                .with(predicate::eq::<Pipeline>(["command1", "command2"].into()))
+                .return_once(|_| Ok(pipeline_success("", 2)))
                 .once();
         }
     );
@@ -561,8 +601,8 @@ out(output);
         |executor| {
             executor
                 .expect_run()
-                .with(predicate::eq::<Command>("command1".into()))
-                .return_once(|_| Ok(CommandResult::new(0, "hello!")))
+                .with(predicate::eq::<Pipeline>(["command1"].into()))
+                .return_once(|_| Ok(pipeline_success("hello!", 1)))
                 .once();
         }
     );
@@ -576,12 +616,12 @@ exec open("file") => `command1`;
         |executor| {
             executor
                 .expect_run()
-                .with(predicate::eq::<Command>(
-                    Command::open("file".to_owned())
-                        .pipe("command1".into())
-                        .unwrap(),
-                ))
-                .return_once(|_| Ok(CommandResult::new(0, "")))
+                .with(predicate::eq::<Pipeline>(Pipeline::new(
+                    vec!["command1".into()],
+                    Some(PipelineSource::File("file".to_owned())),
+                    None,
+                )))
+                .return_once(|_| Ok(pipeline_success("", 1)))
                 .once();
         }
     );
@@ -595,12 +635,12 @@ exec `command1` => write("file");
         |executor| {
             executor
                 .expect_run()
-                .with(predicate::eq::<Command>(
-                    Into::<Command>::into("command1")
-                        .pipe(Command::write("file".to_owned()))
-                        .unwrap(),
-                ))
-                .return_once(|_| Ok(CommandResult::new(0, "")))
+                .with(predicate::eq::<Pipeline>(Pipeline::new(
+                    vec!["command1".into()],
+                    None,
+                    Some(PipelineDestination::FileWrite("file".to_owned())),
+                )))
+                .return_once(|_| Ok(pipeline_success("", 1)))
                 .once();
         }
     );
@@ -608,21 +648,21 @@ exec `command1` => write("file");
     nash_test!(
         should_not_be_able_to_pipe_from_write,
         r#"
-write("test") => `command`;
+exec write("test") => `command`;
 "#
     );
 
     nash_test!(
         should_not_be_able_to_pipe_to_open,
         r#"
-`command` => open("test");
+exec `command` => open("test");
 "#
     );
 
     nash_test!(
         should_not_be_able_to_pipe_to_literal,
         r#"
-`command` => "test";
+exec `command` => "test";
 "#
     );
 
@@ -636,12 +676,69 @@ exec input => `command`;
         |executor| {
             executor
                 .expect_run()
-                .with(predicate::eq::<Command>(
-                    Command::literal("input string".to_owned())
-                        .pipe("command".into())
-                        .unwrap(),
-                ))
-                .return_once(|_| Ok(CommandResult::new(0, "")))
+                .with(predicate::eq::<Pipeline>(Pipeline::new(
+                    vec!["command".into()],
+                    Some(PipelineSource::Literal("input string\n".to_owned())),
+                    None,
+                )))
+                .return_once(|_| Ok(pipeline_success("", 1)))
+                .once();
+        }
+    );
+
+    nash_test!(
+        should_be_able_to_append_to_a_file,
+        r#"
+exec "append me!" => append("file_path");
+"#,
+        "",
+        |executor| {
+            executor
+                .expect_run()
+                .with(predicate::eq::<Pipeline>(Pipeline::new(
+                    vec![],
+                    Some(PipelineSource::Literal("append me!\n".to_owned())),
+                    Some(PipelineDestination::FileAppend("file_path".to_owned())),
+                )))
+                .return_once(|_| Ok(pipeline_success("", 0)))
+                .once();
+        }
+    );
+
+    nash_test!(
+        should_be_able_to_capture_data_from_commands,
+        r#"
+exec `command1`[
+    cap exit_code, 
+    cap stderr
+] => `command2`[
+    cap exit_code as exit_code_2, 
+    cap stderr as stderr_2
+];
+
+out((exit_code, stderr, exit_code_2, stderr_2).fmt());
+"#,
+        "",
+        |executor| {
+            executor
+                .expect_run()
+                .with(predicate::eq::<Pipeline>(Pipeline::new(
+                    vec![
+                        CommandDefinition::new("command1".to_owned(), Vec::new(), true),
+                        CommandDefinition::new("command2".to_owned(), Vec::new(), true),
+                    ],
+                    None,
+                    None,
+                )))
+                .return_once(|_| {
+                    Ok(PipelineResult {
+                        command_outputs: vec![
+                            (69, "from_command_1_stderr".to_owned()),
+                            (70, "from_command_2_stderr".to_owned()),
+                        ],
+                        stdout: "".to_owned(),
+                    })
+                })
                 .once();
         }
     );

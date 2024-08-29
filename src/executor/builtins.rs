@@ -1,9 +1,9 @@
 use std::cell::RefCell;
 
-use crate::{errors::ExecutionError, Command};
+use crate::errors::ExecutionError;
 
 use super::{
-    values::{Type, Value},
+    values::{FileMode, Type, Value},
     ExecutorContext,
 };
 
@@ -17,6 +17,7 @@ pub fn call_builtin(
         ("read", []) => read(context),
         ("open", [Value::String(arg1)]) => open(context, arg1),
         ("write", [Value::String(arg1)]) => write(context, arg1),
+        ("append", [Value::String(arg1)]) => append(context, arg1),
         ("err", [Value::String(arg1)]) => err(context, arg1),
         ("out", [Value::String(arg1)]) => out(context, arg1),
         ("glob", [Value::String(arg1)]) => glob(context, arg1),
@@ -96,11 +97,17 @@ fn read(context: &mut ExecutorContext) -> Result<Value, ExecutionError> {
 
     return Ok(value.into());
 }
+
 fn open(_context: &mut ExecutorContext, value: &str) -> Result<Value, ExecutionError> {
-    Ok(Value::Command(Command::open(value.to_owned())))
+    Ok(Value::FileHandle(value.to_owned(), FileMode::Open))
 }
+
 fn write(_context: &mut ExecutorContext, value: &str) -> Result<Value, ExecutionError> {
-    Ok(Value::Command(Command::write(value.to_owned())))
+    Ok(Value::FileHandle(value.to_owned(), FileMode::Write))
+}
+
+fn append(_context: &mut ExecutorContext, value: &str) -> Result<Value, ExecutionError> {
+    Ok(Value::FileHandle(value.to_owned(), FileMode::Append))
 }
 
 fn out(context: &mut ExecutorContext, value: &str) -> Result<Value, ExecutionError> {

@@ -1,5 +1,4 @@
 #!/bin/nash
 
 out(`test something`.fmt());
-out((`test something` => `test something else`).fmt());
-out((`test something` => `test something else` => `another command`).fmt());
+out(open("test").fmt());

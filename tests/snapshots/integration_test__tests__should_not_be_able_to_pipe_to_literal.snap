@@ -1,11 +1,11 @@
 ---
 source: tests/integration_test.rs
-expression: "run_code(r#\"\n`command` => \"test\";\n\"#)"
+expression: "run_code(r#\"\nexec `command` => \"test\";\n\"#, \"\", |_| {})"
 ---
 stdout: ""
 stderr: ""
 error:
   ExecutionError:
-    message: "Invalid operator expression Command(Command { commands: [(\"command\", [])], source: None, destination_file: None }) Arrow String(\"test\")."
+    message: Invalid type used in command pipeline
     call_stack: []
 exit_code: 103

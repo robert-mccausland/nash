@@ -17,7 +17,7 @@ mod tests {
     use insta::assert_yaml_snapshot;
 
     use crate::{
-        constants::{EXEC, TRUE, VAR},
+        constants::{AS, CAP, EXEC, TRUE, VAR},
         lexer::TokenValue,
     };
 
@@ -65,8 +65,12 @@ mod tests {
             TokenValue::Backtick(),
             TokenValue::StringLiteral("test"),
             TokenValue::Backtick(),
-            TokenValue::Question(),
+            TokenValue::LeftSquare(),
+            TokenValue::Keyword(CAP),
             TokenValue::Identifier("exit_code"),
+            TokenValue::Keyword(AS),
+            TokenValue::Identifier("code"),
+            TokenValue::RightSquare(),
             TokenValue::Semicolon(),
         ];
 

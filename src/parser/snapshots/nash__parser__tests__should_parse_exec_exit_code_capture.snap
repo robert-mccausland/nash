@@ -7,18 +7,20 @@ statements:
       operations: []
       first:
         content:
-          ExecuteExpression:
-            inner:
-              operations: []
-              first:
-                content:
-                  CommandLiteral:
-                    command:
-                      parts: []
-                      end: test
-                    arguments: []
-                accessors: []
-            capture_exit_code:
-              value: exit_code
+          PipelineExpression:
+            commands:
+              - expression:
+                  operations: []
+                  first:
+                    content:
+                      CommandLiteral:
+                        command:
+                          parts: []
+                          end: test
+                        arguments: []
+                    accessors: []
+                capture_stderr: ~
+                capture_exit_code:
+                  value: code
         accessors: []
 functions: []

@@ -1,10 +1,11 @@
 use std::io::{stderr, stdin, stdout, BufRead, BufReader, Write};
 
-use crate::{components::root::Root, errors::ExecutionError, SystemCommandExecutor};
-use commands::CommandExecutor;
+use crate::{
+    components::root::Root, errors::ExecutionError, CommandExecutor, SystemCommandExecutor,
+};
 
 pub use stack::ExecutorStack;
-pub use values::{Type, Value};
+pub use values::{FileMode, Type, Value};
 
 pub mod builtins;
 pub mod commands;

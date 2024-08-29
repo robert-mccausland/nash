@@ -31,5 +31,7 @@ define_keywords!(
     RETURN => "return",
     BREAK => "break",
     CONTINUE => "continue",
-    EXIT => "exit"
+    EXIT => "exit",
+    CAP => "cap",
+    AS => "as"
 );
