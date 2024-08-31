@@ -1,12 +1,10 @@
 use serde::Serialize;
 
 use crate::{
-    components::{
-        stack::ExecutorStack, values::Value, Evaluatable, EvaluationResult, Parsable, Tokens,
-    },
+    components::{stack::Stack, values::Value, Evaluatable, EvaluationResult, Parsable, Tokens},
     constants::{ELSE, IF},
-    executor::ExecutorContext,
     lexer::TokenValue,
+    Executor,
 };
 
 use super::{Block, Expression};
@@ -54,16 +52,17 @@ impl Parsable for BranchExpression {
 }
 
 impl Evaluatable for BranchExpression {
-    fn evaluate(
+    fn evaluate<E: Executor>(
         &self,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
+        stack: &mut Stack,
+        executor: &mut E
+,
     ) -> EvaluationResult<Value> {
         for (condition, block) in &self.conditional_blocks {
-            let condition_result = condition.evaluate(stack, context)?;
+            let condition_result = condition.evaluate(stack, executor)?;
             if let Value::Boolean(result) = condition_result {
                 if result {
-                    return Ok(block.execute(stack, context)?.into());
+                    return Ok(block.execute(stack, executor)?.into());
                 }
             } else {
                 return Err("If statement condition must evaluate to a boolean".into());
@@ -71,7 +70,7 @@ impl Evaluatable for BranchExpression {
         }
 
         if let Some(default_block) = &self.default_block {
-            Ok(default_block.execute(stack, context)?.into())
+            Ok(default_block.execute(stack, executor)?.into())
         } else {
             Ok(Value::Void.into())
         }

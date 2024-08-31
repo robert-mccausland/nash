@@ -2,13 +2,12 @@ use serde::Serialize;
 
 use crate::{
     components::{
-        root::block::Block, stack::ExecutorStack, values::Value, Evaluatable, EvaluationResult,
-        Parsable, Tokens,
+        root::block::Block, stack::Stack, values::Value, Evaluatable, EvaluationResult, Parsable,
+        Tokens,
     },
-    executor::ExecutorContext,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
-    ParserError,
+    Executor, ParserError,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -31,11 +30,12 @@ impl Parsable for BlockExpression {
 }
 
 impl Evaluatable for BlockExpression {
-    fn evaluate(
+    fn evaluate<E: Executor>(
         &self,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
+        stack: &mut Stack,
+        executor: &mut E
+,
     ) -> EvaluationResult<Value> {
-        Ok(self.inner.execute(stack, context)?)
+        Ok(self.inner.execute(stack, executor)?)
     }
 }

@@ -1,7 +1,7 @@
-use std::io::{stderr, stdin, stdout, BufRead, BufReader, Write};
+use std::io::{self, stderr, stdin, stdout, BufRead, BufReader, Stderr, Stdin, Stdout, Write};
 
-use crate::CommandExecutor;
-use system_command_executor::SystemCommandExecutor;
+use commands::{Pipeline, PipelineOutput};
+
 pub mod commands;
 mod system_command_executor;
 
@@ -17,49 +17,65 @@ impl ExecutorOptions {
     }
 }
 
-pub struct ExecutorContext<'a> {
-    pub command_executor: Box<dyn CommandExecutor + 'a>,
-    pub stdin: Box<dyn BufRead + 'a>,
-    pub stdout: Box<dyn Write + 'a>,
-    pub stderr: Box<dyn Write + 'a>,
-    pub options: ExecutorOptions,
+pub trait Executor
+where
+    Self::Stdin: BufRead,
+    Self::Stdout: Write,
+    Self::Stderr: Write,
+{
+    type Stdin;
+    type Stdout;
+    type Stderr;
+
+    fn stdin(&mut self) -> &mut Self::Stdin;
+    fn stdout(&mut self) -> &mut Self::Stdout;
+    fn stderr(&mut self) -> &mut Self::Stderr;
+    fn run_pipeline(&self, pipeline: &Pipeline) -> io::Result<PipelineOutput>;
+    fn options(&self) -> &ExecutorOptions;
 }
 
-pub struct Executor<'a> {
-    pub context: ExecutorContext<'a>,
+pub struct SystemExecutor {
+    options: ExecutorOptions,
+    stdin: <SystemExecutor as Executor>::Stdin,
+    stdout: <SystemExecutor as Executor>::Stdout,
+    stderr: <SystemExecutor as Executor>::Stderr,
 }
 
-impl<'a> Executor<'a> {
-    pub fn new<
-        T: CommandExecutor + 'a,
-        Stdin: BufRead + 'a,
-        Stdout: Write + 'a,
-        Stderr: Write + 'a,
-    >(
-        command_executor: T,
-        stdin: Stdin,
-        stdout: Stdout,
-        stderr: Stderr,
-        options: ExecutorOptions,
-    ) -> Self {
-        Executor {
-            context: ExecutorContext {
-                command_executor: Box::new(command_executor),
-                stdin: Box::new(stdin),
-                stdout: Box::new(stdout),
-                stderr: Box::new(stderr),
-                options,
-            },
+impl SystemExecutor {
+    pub fn new(options: ExecutorOptions) -> Self {
+        Self {
+            options,
+            stdin: BufReader::new(stdin()),
+            stdout: stdout(),
+            stderr: stderr(),
         }
     }
+}
 
-    pub fn default() -> Self {
-        Self::new(
-            SystemCommandExecutor::new(),
-            BufReader::new(stdin()),
-            stdout(),
-            stderr(),
-            ExecutorOptions::default(),
-        )
+impl Executor for SystemExecutor {
+    type Stdin = BufReader<Stdin>;
+
+    type Stdout = Stdout;
+
+    type Stderr = Stderr;
+
+    fn stdin(&mut self) -> &mut Self::Stdin {
+        &mut self.stdin
+    }
+
+    fn stdout(&mut self) -> &mut Self::Stdout {
+        &mut self.stdout
+    }
+
+    fn stderr(&mut self) -> &mut Self::Stderr {
+        &mut self.stderr
+    }
+
+    fn run_pipeline(&self, pipeline: &Pipeline) -> io::Result<PipelineOutput> {
+        system_command_executor::run_pipeline(pipeline)
+    }
+
+    fn options(&self) -> &ExecutorOptions {
+        &self.options
     }
 }

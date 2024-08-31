@@ -1,9 +1,8 @@
 use crate::{
-    components::{stack::ExecutorStack, values::Value, EvaluationResult},
-    executor::ExecutorContext,
+    components::{stack::Stack, values::Value, EvaluationResult},
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
-    ParserError,
+    Executor, ParserError,
 };
 
 mod block;
@@ -56,16 +55,17 @@ impl Expression {
         return Ok(Expression::new(expression, operations));
     }
 
-    pub fn evaluate(
+    pub fn evaluate<E: Executor>(
         &self,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
+        stack: &mut Stack,
+        executor: &mut E
+,
     ) -> EvaluationResult<Value> {
-        let mut result = self.first.evaluate(stack, context)?;
+        let mut result = self.first.evaluate(stack, executor)?;
         let mut previous: Option<&Operator> = None;
 
         for (operator, expression) in &self.operations {
-            let right = expression.evaluate(stack, context)?;
+            let right = expression.evaluate(stack, executor)?;
             if let Some(previous) = previous {
                 if !previous.chains_with(operator) {
                     return Err(format!(
@@ -131,12 +131,13 @@ impl BaseExpression {
         return Ok(BaseExpression { content, accessors });
     }
 
-    fn evaluate(
+    fn evaluate<E: Executor>(
         &self,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
+        stack: &mut Stack,
+        executor: &mut E
+,
     ) -> EvaluationResult<Value> {
-        let mut value = self.content.evaluate(stack, context)?;
+        let mut value = self.content.evaluate(stack, executor)?;
         for accessor in &self.accessors {
             match accessor {
                 Accessor::Integer(integer) => {
@@ -153,7 +154,7 @@ impl BaseExpression {
                     value = core::mem::take(result).into();
                 }
                 Accessor::Variable(variable) => {
-                    value = variable.evaluate_on_instance(Some(value), stack, context)?;
+                    value = variable.evaluate_on_instance(Some(value), stack, executor)?;
                 }
             }
         }
@@ -187,14 +188,15 @@ macro_rules! expression_content {
                 return Err("Unable to parse expression".into());
             }
 
-            fn evaluate(
+            fn evaluate<E: Executor>(
                 &self,
-                stack: &mut ExecutorStack,
-                context: &mut ExecutorContext,
+                stack: &mut Stack,
+                executor: &mut E
+,
             ) -> EvaluationResult<Value> {
                 match self {
                     $(
-                        Self::$expression_type(value) => value.evaluate(stack, context),
+                        Self::$expression_type(value) => value.evaluate(stack, executor),
                     )*
                 }
             }

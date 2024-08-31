@@ -4,14 +4,9 @@ use std::{
     process::{self, Child, ChildStdout, Command, Stdio},
 };
 
-use crate::{
-    CommandDefinition, CommandExecutor, Pipeline, PipelineDestination, PipelineOutput,
-    PipelineSource,
+use super::commands::{
+    CommandDefinition, CommandOutput, Pipeline, PipelineDestination, PipelineOutput, PipelineSource,
 };
-
-use super::commands::CommandOutput;
-
-pub struct SystemCommandExecutor;
 
 enum InputType {
     Null(),
@@ -101,118 +96,106 @@ enum OutputType {
     Pipe(),
 }
 
-impl SystemCommandExecutor {
-    pub fn new() -> Self {
-        Self {}
-    }
+pub fn run_pipeline(pipeline: &Pipeline) -> io::Result<PipelineOutput> {
+    let (mut processes, final_output) = spawn_processes(pipeline)?;
 
-    fn run_pipeline(pipeline: &Pipeline) -> io::Result<PipelineOutput> {
-        let (mut processes, final_output) = Self::spawn_processes(pipeline)?;
+    let mut outputs = Vec::new();
+    for process in &mut processes {
+        let status = process.wait()?;
+        let status_code = status
+            .code()
+            .ok_or(io::Error::other("Unable to get exit code for command"))?
+            .try_into()
+            .map_err(|_| io::Error::other("Exit code was not between 0 and 255"))?;
 
-        let mut outputs = Vec::new();
-        for process in &mut processes {
-            let status = process.wait()?;
-            let status_code = status
-                .code()
-                .ok_or(io::Error::other("Unable to get exit code for command"))?
-                .try_into()
-                .map_err(|_| io::Error::other("Exit code was not between 0 and 255"))?;
-
-            let mut stderr_data = None;
-            if let Some(mut stderr) = process.stderr.take() {
-                let mut buffer = String::new();
-                stderr.read_to_string(&mut buffer)?;
-                stderr_data = Some(buffer);
-            }
-
-            outputs.push(CommandOutput::new(status_code, stderr_data));
+        let mut stderr_data = None;
+        if let Some(mut stderr) = process.stderr.take() {
+            let mut buffer = String::new();
+            stderr.read_to_string(&mut buffer)?;
+            stderr_data = Some(buffer);
         }
 
-        let stdout = if let Some(destination) = &pipeline.destination {
-            final_output.write_to_destination(destination)?;
-            None
-        } else {
-            Some(final_output.write_to_string()?)
-        };
-
-        return Ok(PipelineOutput::new(stdout, outputs));
+        outputs.push(CommandOutput::new(status_code, stderr_data));
     }
 
-    fn spawn_processes(pipeline: &Pipeline) -> io::Result<(Vec<Child>, InputType)> {
-        let mut processes = Vec::new();
-        let mut input = Self::get_input_type(pipeline)?;
-        let mut command_definitions = pipeline.commands.iter().peekable();
-        while let Some(command_definition) = command_definitions.next() {
-            // If we are the last command we might need to output to a file or whatever which we
-            // need to setup when we are spawning the process
-            let output = if command_definitions.peek().is_some() {
-                OutputType::Pipe()
-            } else {
-                Self::get_output_type(pipeline)?
-            };
+    let stdout = if let Some(destination) = &pipeline.destination {
+        final_output.write_to_destination(destination)?;
+        None
+    } else {
+        Some(final_output.write_to_string()?)
+    };
 
-            let mut process = Self::spawn_process(command_definition, input, output)?;
-
-            if let Some(stdout) = process.stdout.take() {
-                input = InputType::ChildStdout(stdout);
-            } else {
-                input = InputType::Null();
-            }
-
-            processes.push(process);
-        }
-
-        return Ok((processes, input));
-    }
-
-    fn spawn_process(
-        definition: &CommandDefinition,
-        input: InputType,
-        output: OutputType,
-    ) -> io::Result<Child> {
-        let mut command = process::Command::new(definition.program.to_owned());
-        command.args(definition.arguments.to_owned());
-        let process_callback = input.write_to_command(&mut command);
-
-        // Stdout depends on what kind of output we need to provide
-        command.stdout(match output {
-            OutputType::File(file) => Stdio::from(file),
-            OutputType::Pipe() => Stdio::piped(),
-        });
-
-        if definition.capture_stderr {
-            command.stderr(Stdio::piped());
-        }
-
-        let mut process = command.spawn()?;
-        process_callback.write_to_process(&mut process)?;
-
-        return Ok(process);
-    }
-
-    fn get_input_type(pipeline: &Pipeline) -> io::Result<InputType> {
-        Ok(if let Some(source) = &pipeline.source {
-            match source {
-                PipelineSource::File(file) => InputType::File(File::open(file)?),
-                PipelineSource::Literal(literal) => InputType::Literal(literal.to_owned()),
-            }
-        } else {
-            InputType::Null()
-        })
-    }
-
-    fn get_output_type(pipeline: &Pipeline) -> io::Result<OutputType> {
-        Ok(match &pipeline.destination {
-            Some(destination) => OutputType::File(destination_to_file(destination)?),
-            None => OutputType::Pipe(),
-        })
-    }
+    return Ok(PipelineOutput::new(stdout, outputs));
 }
 
-impl CommandExecutor for SystemCommandExecutor {
-    fn run(&self, pipeline: &Pipeline) -> io::Result<PipelineOutput> {
-        Self::run_pipeline(pipeline)
+fn spawn_processes(pipeline: &Pipeline) -> io::Result<(Vec<Child>, InputType)> {
+    let mut processes = Vec::new();
+    let mut input = get_input_type(pipeline)?;
+    let mut command_definitions = pipeline.commands.iter().peekable();
+    while let Some(command_definition) = command_definitions.next() {
+        // If we are the last command we might need to output to a file or whatever which we
+        // need to setup when we are spawning the process
+        let output = if command_definitions.peek().is_some() {
+            OutputType::Pipe()
+        } else {
+            get_output_type(pipeline)?
+        };
+
+        let mut process = spawn_process(command_definition, input, output)?;
+
+        if let Some(stdout) = process.stdout.take() {
+            input = InputType::ChildStdout(stdout);
+        } else {
+            input = InputType::Null();
+        }
+
+        processes.push(process);
     }
+
+    return Ok((processes, input));
+}
+
+fn spawn_process(
+    definition: &CommandDefinition,
+    input: InputType,
+    output: OutputType,
+) -> io::Result<Child> {
+    let mut command = process::Command::new(definition.program.to_owned());
+    command.args(definition.arguments.to_owned());
+    let process_callback = input.write_to_command(&mut command);
+
+    // Stdout depends on what kind of output we need to provide
+    command.stdout(match output {
+        OutputType::File(file) => Stdio::from(file),
+        OutputType::Pipe() => Stdio::piped(),
+    });
+
+    if definition.capture_stderr {
+        command.stderr(Stdio::piped());
+    }
+
+    let mut process = command.spawn()?;
+    process_callback.write_to_process(&mut process)?;
+
+    return Ok(process);
+}
+
+fn get_input_type(pipeline: &Pipeline) -> io::Result<InputType> {
+    Ok(if let Some(source) = &pipeline.source {
+        match source {
+            PipelineSource::File(file) => InputType::File(File::open(file)?),
+            PipelineSource::Literal(literal) => InputType::Literal(literal.to_owned()),
+        }
+    } else {
+        InputType::Null()
+    })
+}
+
+fn get_output_type(pipeline: &Pipeline) -> io::Result<OutputType> {
+    Ok(match &pipeline.destination {
+        Some(destination) => OutputType::File(destination_to_file(destination)?),
+        None => OutputType::Pipe(),
+    })
 }
 
 fn destination_to_file(destination: &PipelineDestination) -> io::Result<File> {

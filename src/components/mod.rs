@@ -1,10 +1,9 @@
 use root::Root;
-use stack::ExecutorStack;
+use stack::Stack;
 use values::Value;
 
 use crate::{
     errors::{self, ExecutionError, ParserError},
-    executor::ExecutorContext,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
     Executor,
@@ -47,16 +46,17 @@ pub fn parse<'a, I: IntoIterator<Item = &'a Token<'a>>>(
 }
 
 impl ComponentTree {
-    pub fn execute(&mut self, executor: &mut Executor) -> Result<ExecutionOutput, ExecutionError> {
-        let mut stack = ExecutorStack::new();
+    pub fn execute<E: Executor>(
+        &mut self,
+        executor: &mut E
+,
+    ) -> Result<ExecutionOutput, ExecutionError> {
+        let mut stack = Stack::new();
 
-        let exit_code = self
-            .root
-            .execute(&mut stack, &mut executor.context)
-            .map_err(|mut err| {
-                err.set_call_stack(stack.get_call_stack().clone());
-                return err;
-            })?;
+        let exit_code = self.root.execute(&mut stack, executor).map_err(|mut err| {
+            err.set_call_stack(stack.get_call_stack().clone());
+            return err;
+        })?;
 
         return Ok(ExecutionOutput::new(exit_code));
     }
@@ -105,11 +105,10 @@ trait Evaluatable
 where
     Self: Parsable,
 {
-    fn evaluate(
-        &self,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
-    ) -> EvaluationResult<Value>;
+    fn evaluate<E: Executor>(&self, stack: &mut Stack, executor: &mut E
+,
+)
+        -> EvaluationResult<Value>;
 }
 
 pub type EvaluationResult<T> = Result<T, EvaluationException>;

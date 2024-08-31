@@ -2,14 +2,13 @@ use serde::Serialize;
 
 use crate::{
     components::{
-        root::identifier::Identifier, stack::ExecutorStack, values::Value, ControlFlowOptions,
-        Evaluatable, EvaluationException, EvaluationResult, Parsable, Tokens,
+        root::identifier::Identifier, stack::Stack, values::Value, ControlFlowOptions, Evaluatable,
+        EvaluationException, EvaluationResult, Parsable, Tokens,
     },
     constants::{FOR, IN, WHILE},
-    executor::ExecutorContext,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
-    ParserError,
+    Executor, ParserError,
 };
 
 use super::{Block, Expression};
@@ -51,12 +50,13 @@ impl Parsable for ForLoopExpression {
 }
 
 impl Evaluatable for ForLoopExpression {
-    fn evaluate(
+    fn evaluate<E: Executor>(
         &self,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
+        stack: &mut Stack,
+        executor: &mut E
+,
     ) -> EvaluationResult<Value> {
-        let Value::Array(array, _) = self.array_expression.evaluate(stack, context)? else {
+        let Value::Array(array, _) = self.array_expression.evaluate(stack, executor)? else {
             return Err("for ... in loop must be used on an array value".into());
         };
 
@@ -64,7 +64,7 @@ impl Evaluatable for ForLoopExpression {
             let result = self.loop_body.execute_with_initializer(
                 |stack| stack.declare_and_assign_variable(&self.item_name.value, item.clone()),
                 stack,
-                context,
+                executor,
             );
 
             if let Err(EvaluationException::AlterControlFlow(ControlFlowOptions::Break())) = result
@@ -112,13 +112,14 @@ impl Parsable for WhileLoopExpression {
 }
 
 impl Evaluatable for WhileLoopExpression {
-    fn evaluate(
+    fn evaluate<E: Executor>(
         &self,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
+        stack: &mut Stack,
+        executor: &mut E
+,
     ) -> EvaluationResult<Value> {
         loop {
-            let Value::Boolean(check_result) = self.check_expression.evaluate(stack, context)?
+            let Value::Boolean(check_result) = self.check_expression.evaluate(stack, executor)?
             else {
                 return Err("while loop check expression must return a boolean value".into());
             };
@@ -127,7 +128,7 @@ impl Evaluatable for WhileLoopExpression {
                 return Ok(Value::Void.into());
             }
 
-            let result = self.loop_body.execute(stack, context);
+            let result = self.loop_body.execute(stack, executor);
             if let Err(EvaluationException::AlterControlFlow(ControlFlowOptions::Break())) = result
             {
                 return Ok(Value::Void.into());

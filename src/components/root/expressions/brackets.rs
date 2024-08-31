@@ -1,9 +1,9 @@
 use serde::Serialize;
 
 use crate::{
-    components::{stack::ExecutorStack, values::Value, Evaluatable, Parsable, Tokens},
-    executor::ExecutorContext,
+    components::{stack::Stack, values::Value, Evaluatable, Parsable, Tokens},
     lexer::TokenValue,
+    Executor,
 };
 
 use super::Expression;
@@ -38,11 +38,12 @@ impl Parsable for BracketExpression {
 }
 
 impl Evaluatable for BracketExpression {
-    fn evaluate(
+    fn evaluate<E: Executor>(
         &self,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
+        stack: &mut Stack,
+        executor: &mut E
+,
     ) -> crate::components::EvaluationResult<Value> {
-        self.inner.evaluate(stack, context)
+        self.inner.evaluate(stack, executor)
     }
 }

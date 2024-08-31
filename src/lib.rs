@@ -8,7 +8,7 @@ pub use executor::commands::{
     PipelineOutput, PipelineSource,
 };
 
-pub use executor::{Executor, ExecutorOptions};
+pub use executor::{Executor, ExecutorOptions, SystemExecutor};
 
 mod components;
 mod constants;
@@ -17,9 +17,9 @@ mod executor;
 mod lexer;
 mod utils;
 
-pub fn execute<R: Read>(
+pub fn execute<R: Read, E: Executor>(
     script: &mut R,
-    executor: &mut Executor,
+    executor: &mut E,
 ) -> Result<ExecutionOutput, NashError> {
     let mut content = String::new();
     script

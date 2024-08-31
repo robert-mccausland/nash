@@ -1,9 +1,9 @@
 use crate::{
-    components::{stack::ExecutorStack, values::Value, Evaluatable, EvaluationResult, Parsable},
+    components::{stack::Stack, values::Value, Evaluatable, EvaluationResult, Parsable},
     constants::{FALSE, TRUE},
     errors::ParserError,
-    executor::ExecutorContext,
     lexer::{Token, TokenValue},
+    Executor,
 };
 
 mod command;
@@ -55,11 +55,8 @@ impl Parsable for IntegerLiteral {
 }
 
 impl Evaluatable for IntegerLiteral {
-    fn evaluate(
-        &self,
-        _stack: &mut ExecutorStack,
-        _context: &mut ExecutorContext,
-    ) -> EvaluationResult<Value> {
+    fn evaluate<E: Executor>(&self, _stack: &mut Stack, _context: &mut E
+) -> EvaluationResult<Value> {
         Ok(Value::Integer(self.value.try_into().unwrap()).into())
     }
 }
@@ -93,11 +90,8 @@ impl Parsable for BooleanLiteral {
 }
 
 impl Evaluatable for BooleanLiteral {
-    fn evaluate(
-        &self,
-        _stack: &mut ExecutorStack,
-        _context: &mut ExecutorContext,
-    ) -> EvaluationResult<Value> {
+    fn evaluate<E: Executor>(&self, _stack: &mut Stack, _context: &mut E
+) -> EvaluationResult<Value> {
         Ok(Value::Boolean(self.value).into())
     }
 }

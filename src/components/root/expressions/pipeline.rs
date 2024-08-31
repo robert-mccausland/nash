@@ -3,19 +3,16 @@ use serde::Serialize;
 use crate::{
     components::{
         root::identifier::Identifier,
-        stack::ExecutorStack,
+        stack::Stack,
         values::{FileMode, Value},
         Evaluatable, EvaluationResult, Parsable, Tokens,
     },
     constants::{AS, CAP, EXEC},
     errors::ExecutionError,
-    executor::{
-        commands::{CommandDefinition, PipelineDestination, PipelineSource},
-        ExecutorContext,
-    },
+    executor::Executor,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
-    ParserError, Pipeline,
+    CommandDefinition, ParserError, Pipeline, PipelineDestination, PipelineSource,
 };
 
 use super::Expression;
@@ -134,10 +131,11 @@ impl Parsable for PipelineExpression {
 }
 
 impl Evaluatable for PipelineExpression {
-    fn evaluate(
+    fn evaluate<E: Executor>(
         &self,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
+        stack: &mut Stack,
+        executor: &mut E
+,
     ) -> EvaluationResult<Value> {
         let mut pipeline = Pipeline {
             commands: Vec::new(),
@@ -147,7 +145,7 @@ impl Evaluatable for PipelineExpression {
 
         let mut commands = self.commands.iter();
         let first = commands.next().unwrap();
-        let first_value = first.expression.evaluate(stack, context)?;
+        let first_value = first.expression.evaluate(stack, executor)?;
 
         if let Value::String(literal) = first_value {
             pipeline.source = Some(PipelineSource::Literal(literal + "\n"))
@@ -176,7 +174,7 @@ impl Evaluatable for PipelineExpression {
                     format!("Destination must be the last element of a command pipeline").into(),
                 );
             }
-            let command_value = command.expression.evaluate(stack, context)?;
+            let command_value = command.expression.evaluate(stack, executor)?;
             if let Value::Command(program, arguments) = command_value {
                 pipeline.commands.push(CommandDefinition {
                     program,
@@ -203,9 +201,8 @@ impl Evaluatable for PipelineExpression {
             }
         }
 
-        let result = context
-            .command_executor
-            .run(&pipeline)
+        let result = executor
+            .run_pipeline(&pipeline)
             .map_err::<ExecutionError, _>(|err| {
                 format!("Error running command: {:}", err).into()
             })?;

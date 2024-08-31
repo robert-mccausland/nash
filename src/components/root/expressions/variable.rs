@@ -2,11 +2,11 @@ use serde::Serialize;
 
 use crate::{
     components::{
-        root::identifier::Identifier, stack::ExecutorStack, values::Value, Evaluatable,
-        EvaluationResult, Parsable, Tokens,
+        root::identifier::Identifier, stack::Stack, values::Value, Evaluatable, EvaluationResult,
+        Parsable, Tokens,
     },
-    executor::ExecutorContext,
     lexer::TokenValue,
+    Executor,
 };
 
 use super::Expression;
@@ -58,20 +58,21 @@ impl Parsable for VariableExpression {
 }
 
 impl VariableExpression {
-    pub fn evaluate_on_instance(
+    pub fn evaluate_on_instance<E: Executor>(
         &self,
         instance: Option<Value>,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
+        stack: &mut Stack,
+        executor: &mut E
+,
     ) -> EvaluationResult<Value> {
         Ok(if let Some(arguments) = &self.arguments {
             let arguments = arguments
                 .iter()
-                .map(|x| x.evaluate(stack, context))
+                .map(|x| x.evaluate(stack, executor))
                 .collect::<Result<Vec<_>, _>>()?;
 
             stack
-                .execute_function(&self.name.value, instance, arguments, context)?
+                .execute_function(&self.name.value, instance, arguments, executor)?
                 .into()
         } else if instance.is_none() {
             stack.resolve_variable(&self.name.value)?.into()
@@ -82,11 +83,12 @@ impl VariableExpression {
 }
 
 impl Evaluatable for VariableExpression {
-    fn evaluate(
+    fn evaluate<E: Executor>(
         &self,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
+        stack: &mut Stack,
+        executor: &mut E
+,
     ) -> EvaluationResult<Value> {
-        self.evaluate_on_instance(None, stack, context)
+        self.evaluate_on_instance(None, stack, executor)
     }
 }

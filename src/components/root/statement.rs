@@ -1,12 +1,11 @@
 use serde::Serialize;
 
 use crate::{
-    components::{stack::ExecutorStack, values::Value, ControlFlowOptions, EvaluationResult},
+    components::{stack::Stack, values::Value, ControlFlowOptions, EvaluationResult},
     constants::{BREAK, CONTINUE, EXIT, RETURN, VAR},
-    executor::ExecutorContext,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
-    ExecutionError, ParserError,
+    ExecutionError, Executor, ParserError,
 };
 
 use super::{
@@ -37,17 +36,14 @@ impl Statement {
         return Ok(statement);
     }
 
-    pub fn execute(
-        &self,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
-    ) -> EvaluationResult<Value> {
+    pub fn execute<E: Executor>(&self, stack: &mut Stack, executor: &mut E
+) -> EvaluationResult<Value> {
         match self {
             Statement::Declaration(variable_name, type_definition) => {
                 stack.declare_variable(&variable_name.value, type_definition.value.clone())?;
             }
             Statement::Assignment(assignment, expression) => {
-                let result = expression.evaluate(stack, context)?;
+                let result = expression.evaluate(stack, executor)?;
                 match assignment {
                     Assignment::Simple(identifier) => {
                         stack.assign_variable(&identifier.value, result)?;
@@ -70,7 +66,7 @@ impl Statement {
                 }
             }
             Statement::DeclarationAssignment(assignment, expression) => {
-                let result = expression.evaluate(stack, context)?;
+                let result = expression.evaluate(stack, executor)?;
                 match assignment {
                     Assignment::Simple(identifier) => {
                         stack.declare_and_assign_variable(&identifier.value, result)?;
@@ -93,14 +89,14 @@ impl Statement {
                 }
             }
             Statement::Expression(expression) => {
-                expression.evaluate(stack, context)?;
+                expression.evaluate(stack, executor)?;
             }
             Statement::Return(expression) => {
-                let result = expression.evaluate(stack, context)?;
+                let result = expression.evaluate(stack, executor)?;
                 return Err(ControlFlowOptions::Return(result).into());
             }
             Statement::Exit(expression) => {
-                let Value::Integer(value) = expression.evaluate(stack, context)? else {
+                let Value::Integer(value) = expression.evaluate(stack, executor)? else {
                     return Err("exit statement must be provided with an integer value".into());
                 };
 

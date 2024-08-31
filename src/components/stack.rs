@@ -3,23 +3,22 @@ use std::collections::HashMap;
 use crate::{
     components::{ControlFlowOptions, EvaluationException, EvaluationResult},
     constants::UNDERSCORE,
-    ExecutionError,
+    ExecutionError, Executor,
 };
 
 use super::{
     builtins,
     root::Function,
     values::{Type, Value},
-    ExecutorContext,
 };
 
-pub struct ExecutorStack {
+pub struct Stack {
     functions: HashMap<String, Function>,
     scopes: Vec<ExecutorScope>,
     call_stack: Vec<String>,
 }
 
-impl ExecutorStack {
+impl Stack {
     pub fn new() -> Self {
         Self {
             functions: HashMap::new(),
@@ -126,39 +125,39 @@ impl ExecutorStack {
             )?)
     }
 
-    pub fn execute_function(
+    pub fn execute_function<E: Executor>(
         &mut self,
         function_name: &str,
         instance: Option<Value>,
         arguments: Vec<Value>,
-        context: &mut ExecutorContext,
+        executor: &mut E,
     ) -> EvaluationResult<Value> {
-        if self.call_stack.len() >= context.options.max_call_stack_depth {
+        if self.call_stack.len() >= executor.options().max_call_stack_depth {
             return Err(format!(
                 "Call stack depth limit of {} exceeded",
-                context.options.max_call_stack_depth
+                executor.options().max_call_stack_depth
             )
             .into());
         }
 
         self.call_stack.push(function_name.to_owned());
         let result = if let Some(instance) = instance {
-            builtins::call_builtin_instance(function_name, &instance, &arguments, context)?
+            builtins::call_builtin_instance(function_name, &instance, &arguments, executor)?
         } else if let Some(function) = self.functions.get(function_name) {
-            self.call_function(function.clone(), arguments, context)?
+            self.call_function(function.clone(), arguments, executor)?
         } else {
-            builtins::call_builtin(function_name, &arguments, context)?
+            builtins::call_builtin(function_name, &arguments, executor)?
         };
 
         self.call_stack.pop();
         return Ok(result);
     }
 
-    fn call_function(
+    fn call_function<E: Executor>(
         &mut self,
         function: Function,
         arguments: Vec<Value>,
-        context: &mut ExecutorContext,
+        executor: &mut E,
     ) -> EvaluationResult<Value> {
         if function.arguments.len() != arguments.len() {
             return Err(format!(
@@ -192,7 +191,7 @@ impl ExecutorStack {
                 Ok(())
             },
             self,
-            context,
+            executor,
         );
 
         self.scopes = outer_scope;

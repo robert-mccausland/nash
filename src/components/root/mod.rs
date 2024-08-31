@@ -1,11 +1,11 @@
 use serde::Serialize;
 use statement::Statement;
 
-use crate::{executor::ExecutorContext, lexer::Token, utils::iterators::Backtrackable};
+use crate::{lexer::Token, utils::iterators::Backtrackable, Executor};
 
 use super::{
     errors::{ExecutionError, ParserError},
-    stack::ExecutorStack,
+    stack::Stack,
     ControlFlowOptions, EvaluationException, Tokens,
 };
 
@@ -52,10 +52,11 @@ impl Root {
         });
     }
 
-    pub fn execute(
+    pub fn execute<E: Executor>(
         &self,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
+        stack: &mut Stack,
+        executor: &mut E
+,
     ) -> Result<u8, ExecutionError> {
         for function in &self.functions {
             stack.declare_function(&function.name.value, function.clone())?;
@@ -64,7 +65,7 @@ impl Root {
         stack.push_scope();
         let mut exit_code = 0;
         for statement in &self.statements {
-            if let Err(exception) = statement.execute(stack, context) {
+            if let Err(exception) = statement.execute(stack, executor) {
                 match exception {
                     EvaluationException::AlterControlFlow(ControlFlowOptions::Exit(value)) => {
                         exit_code = value;

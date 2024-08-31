@@ -3,12 +3,12 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
     components::{
-        errors::ParserError, root::expressions::Expression, stack::ExecutorStack, values::Value,
+        errors::ParserError, root::expressions::Expression, stack::Stack, values::Value,
         Evaluatable, EvaluationResult, Parsable, Tokens,
     },
-    executor::ExecutorContext,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
+    Executor,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -52,15 +52,16 @@ impl StringLiteral {
         return Ok(StringLiteral::new(variables, end));
     }
 
-    pub fn resolve(
+    pub fn resolve<E: Executor>(
         &self,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
+        stack: &mut Stack,
+        executor: &mut E
+,
     ) -> EvaluationResult<String> {
         let mut result = String::new();
         for (prefix, expression) in &self.parts {
             result += &prefix;
-            let Value::String(variable_value) = expression.evaluate(stack, context)? else {
+            let Value::String(variable_value) = expression.evaluate(stack, executor)? else {
                 return Err("Template variable in strings must resolve to a string".into());
             };
             result += &variable_value;
@@ -98,12 +99,9 @@ impl Parsable for StringLiteral {
 }
 
 impl Evaluatable for StringLiteral {
-    fn evaluate(
-        &self,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
-    ) -> EvaluationResult<Value> {
-        Ok(Value::String(self.resolve(stack, context)?).into())
+    fn evaluate<E: Executor>(&self, stack: &mut Stack, executor: &mut E
+) -> EvaluationResult<Value> {
+        Ok(Value::String(self.resolve(stack, executor)?).into())
     }
 }
 

@@ -1,13 +1,10 @@
 use serde::Serialize;
 
 use crate::{
-    components::{
-        stack::ExecutorStack, values::Value, Evaluatable, EvaluationResult, Parsable, Tokens,
-    },
-    executor::ExecutorContext,
+    components::{stack::Stack, values::Value, Evaluatable, EvaluationResult, Parsable, Tokens},
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
-    ParserError,
+    Executor, ParserError,
 };
 
 use super::Expression;
@@ -62,14 +59,15 @@ fn try_parse_collection<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
     return Ok(None);
 }
 
-fn evaluate_collection(
+fn evaluate_collection<E: Executor>(
     values: &Vec<Expression>,
-    stack: &mut ExecutorStack,
-    context: &mut ExecutorContext,
+    stack: &mut Stack,
+    executor: &mut E
+,
 ) -> EvaluationResult<Vec<Value>> {
     let mut evaluated_values = Vec::new();
     for value in values {
-        evaluated_values.push(value.evaluate(stack, context)?);
+        evaluated_values.push(value.evaluate(stack, executor)?);
     }
     return Ok(evaluated_values.into());
 }
@@ -89,12 +87,9 @@ impl Parsable for TupleExpression {
 }
 
 impl Evaluatable for TupleExpression {
-    fn evaluate(
-        &self,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
-    ) -> EvaluationResult<Value> {
-        Ok(Value::Tuple(evaluate_collection(&self.values, stack, context)?).into())
+    fn evaluate<E: Executor>(&self, stack: &mut Stack, executor: &mut E
+) -> EvaluationResult<Value> {
+        Ok(Value::Tuple(evaluate_collection(&self.values, stack, executor)?).into())
     }
 }
 
@@ -113,12 +108,9 @@ impl Parsable for ArrayExpression {
 }
 
 impl Evaluatable for ArrayExpression {
-    fn evaluate(
-        &self,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
-    ) -> EvaluationResult<Value> {
-        let values = evaluate_collection(&self.values, stack, context)?;
+    fn evaluate<E: Executor>(&self, stack: &mut Stack, executor: &mut E
+) -> EvaluationResult<Value> {
+        let values = evaluate_collection(&self.values, stack, executor)?;
         let mut array_types = values.iter().map(|x| x.get_type());
         let Some(array_type) = array_types.next() else {
             return Err("Unable to determine array type for empty array".into());

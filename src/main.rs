@@ -1,5 +1,7 @@
 use std::{env, error::Error, fs::File, path::PathBuf, process::ExitCode};
 
+use nash::ExecutorOptions;
+
 fn main() -> ExitCode {
     match main_impl() {
         Ok(code) => code,
@@ -19,7 +21,7 @@ fn main_impl() -> Result<u8, u8> {
         100
     })?;
 
-    let mut executor = nash::Executor::default();
+    let mut executor = nash::SystemExecutor::new(ExecutorOptions::default());
     let result = nash::execute(&mut file, &mut executor).map_err(|err| {
         eprintln!("Error running nash script: {err}");
         err.exit_code()

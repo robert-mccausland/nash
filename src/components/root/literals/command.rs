@@ -2,12 +2,12 @@ use serde::Serialize;
 
 use crate::{
     components::{
-        errors::ParserError, stack::ExecutorStack, values::Value, Evaluatable, EvaluationResult,
-        Parsable, Tokens,
+        errors::ParserError, stack::Stack, values::Value, Evaluatable, EvaluationResult, Parsable,
+        Tokens,
     },
-    executor::ExecutorContext,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
+    Executor,
 };
 
 use super::string::StringLiteral;
@@ -79,16 +79,17 @@ impl Parsable for CommandLiteral {
 }
 
 impl Evaluatable for CommandLiteral {
-    fn evaluate(
+    fn evaluate<E: Executor>(
         &self,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
+        stack: &mut Stack,
+        executor: &mut E
+,
     ) -> EvaluationResult<Value> {
         let result = Value::Command(
-            self.command.resolve(stack, context)?,
+            self.command.resolve(stack, executor)?,
             self.arguments
                 .iter()
-                .map(|argument| argument.resolve(stack, context))
+                .map(|argument| argument.resolve(stack, executor))
                 .collect::<Result<Vec<_>, _>>()?,
         );
 

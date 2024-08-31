@@ -1,11 +1,10 @@
 use serde::Serialize;
 
 use crate::{
-    components::{stack::ExecutorStack, values::Value, EvaluationResult},
-    executor::ExecutorContext,
+    components::{stack::Stack, values::Value, EvaluationResult},
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
-    ExecutionError, ParserError,
+    ExecutionError, Executor, ParserError,
 };
 
 use super::{statement::Statement, Tokens};
@@ -37,24 +36,25 @@ impl Block {
         return Ok(Block { statements });
     }
 
-    pub fn execute(
-        &self,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
-    ) -> EvaluationResult<Value> {
-        self.execute_with_initializer(|_| Ok(()), stack, context)
+    pub fn execute<E: Executor>(&self, stack: &mut Stack, executor: &mut E
+) -> EvaluationResult<Value> {
+        self.execute_with_initializer(|_| Ok(()), stack, executor)
     }
 
-    pub fn execute_with_initializer<F: FnOnce(&mut ExecutorStack) -> Result<(), ExecutionError>>(
+    pub fn execute_with_initializer<
+        E: Executor,
+        F: FnOnce(&mut Stack) -> Result<(), ExecutionError>,
+    >(
         &self,
         initialize: F,
-        stack: &mut ExecutorStack,
-        context: &mut ExecutorContext,
+        stack: &mut Stack,
+        executor: &mut E
+,
     ) -> EvaluationResult<Value> {
         stack.push_scope();
         initialize(stack)?;
         for statement in &self.statements {
-            statement.execute(stack, context)?;
+            statement.execute(stack, executor)?;
         }
         stack.pop_scope();
         return Ok(Value::Void);

@@ -2,6 +2,10 @@ use std::io;
 
 use serde::Serialize;
 
+pub trait CommandExecutor {
+    fn run(&self, command: &Pipeline) -> io::Result<PipelineOutput>;
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandDefinition {
     pub program: String,
@@ -105,8 +109,4 @@ impl From<u8> for CommandOutput {
     fn from(value: u8) -> Self {
         Self::new(value, None)
     }
-}
-
-pub trait CommandExecutor {
-    fn run(&self, command: &Pipeline) -> io::Result<PipelineOutput>;
 }
