@@ -210,22 +210,28 @@ impl Evaluatable for PipelineExpression {
             local_commands.next();
         }
 
-        for ((exit_code, stderr), command) in result.command_outputs.into_iter().zip(local_commands)
-        {
+        for (command_output, command) in result.command_outputs.into_iter().zip(local_commands) {
             if let Some(capture_exit_code) = &command.capture_exit_code {
                 stack.declare_and_assign_variable(
                     &capture_exit_code.value,
-                    (exit_code as i32).into(),
+                    (command_output.exit_code as i32).into(),
                 )?;
-            } else if exit_code != 0 {
-                return Err(format!("Command returned non-zero exit code: ({exit_code})").into());
+            } else if command_output.exit_code != 0 {
+                return Err(format!(
+                    "Command returned non-zero exit code: ({})",
+                    command_output.exit_code
+                )
+                .into());
             }
 
             if let Some(capture_stderr) = &command.capture_stderr {
-                stack.declare_and_assign_variable(&capture_stderr.value, stderr.into())?;
+                stack.declare_and_assign_variable(
+                    &capture_stderr.value,
+                    command_output.stderr.unwrap_or_default().into(),
+                )?;
             }
         }
 
-        return Ok(result.stdout.into());
+        return Ok(result.stdout.unwrap_or_default().into());
     }
 }

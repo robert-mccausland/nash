@@ -3,8 +3,8 @@ use std::io::Read;
 
 pub use errors::{ExecutionError, LexerError, NashError, ParserError};
 pub use executor::commands::{
-    CommandDefinition, CommandExecutor, Pipeline, PipelineDestination, PipelineExecutionOptions,
-    PipelineResult, PipelineSource, SystemCommandExecutor,
+    CommandDefinition, CommandExecutor, CommandOutput, Pipeline, PipelineDestination,
+    PipelineOutput, PipelineSource,
 };
 pub use executor::ExecutionOutput;
 pub use executor::{Executor, ExecutorOptions};

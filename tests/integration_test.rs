@@ -10,7 +10,7 @@ mod tests {
         pub CommandExecutor {}
 
         impl CommandExecutor for CommandExecutor {
-            fn run(&self, command: &Pipeline) -> IoResult<PipelineResult>;
+            fn run(&self, command: &Pipeline) -> IoResult<PipelineOutput>;
         }
     }
 
@@ -60,8 +60,8 @@ mod tests {
         };
     }
 
-    fn pipeline_success(stdout: &str, length: usize) -> PipelineResult {
-        PipelineResult::new(stdout.to_owned(), vec![(0, String::new()); length])
+    fn pipeline_success(stdout: &str, length: usize) -> PipelineOutput {
+        PipelineOutput::new(Some(stdout.to_owned()), vec![0.into(); length])
     }
 
     macro_rules! nash_test {
@@ -516,12 +516,7 @@ out(code.fmt());
             executor
                 .expect_run()
                 .with(predicate::eq::<Pipeline>(["my_command"].into()))
-                .return_once(|_| {
-                    Ok(PipelineResult::new(
-                        String::new(),
-                        vec![(69, String::new())],
-                    ))
-                })
+                .return_once(|_| Ok(PipelineOutput::new(None, Some(69.into()))))
                 .once();
         }
     );
@@ -537,12 +532,7 @@ out(code.fmt());
             executor
                 .expect_run()
                 .with(predicate::eq::<Pipeline>(["my_command"].into()))
-                .return_once(|_| {
-                    Ok(PipelineResult::new(
-                        String::new(),
-                        vec![(69, String::new())],
-                    ))
-                })
+                .return_once(|_| Ok(PipelineOutput::new(None, Some(69.into()))))
                 .once();
         }
     );
@@ -567,9 +557,12 @@ out(stderr.fmt());
                     None,
                 )))
                 .return_once(|_| {
-                    Ok(PipelineResult::new(
-                        String::new(),
-                        vec![(0, "Something in stderr!".to_owned())],
+                    Ok(PipelineOutput::new(
+                        None,
+                        Some(CommandOutput::new(
+                            0,
+                            Some("Something in stderr!".to_owned()),
+                        )),
                     ))
                 })
                 .once();
@@ -731,12 +724,12 @@ out((exit_code, stderr, exit_code_2, stderr_2).fmt());
                     None,
                 )))
                 .return_once(|_| {
-                    Ok(PipelineResult {
+                    Ok(PipelineOutput {
                         command_outputs: vec![
-                            (69, "from_command_1_stderr".to_owned()),
-                            (70, "from_command_2_stderr".to_owned()),
+                            CommandOutput::new(69, "from_command_1_stderr".to_owned().into()),
+                            CommandOutput::new(70, "from_command_2_stderr".to_owned().into()),
                         ],
-                        stdout: "".to_owned(),
+                        stdout: "".to_owned().into(),
                     })
                 })
                 .once();

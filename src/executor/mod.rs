@@ -1,15 +1,15 @@
 use std::io::{stderr, stdin, stdout, BufRead, BufReader, Write};
 
-use crate::{
-    components::root::Root, errors::ExecutionError, CommandExecutor, SystemCommandExecutor,
-};
+use crate::{components::root::Root, errors::ExecutionError, CommandExecutor};
 
 pub use stack::ExecutorStack;
+use system_command_executor::SystemCommandExecutor;
 pub use values::{FileMode, Type, Value};
 
 pub mod builtins;
 pub mod commands;
 mod stack;
+mod system_command_executor;
 mod values;
 
 pub struct ExecutorOptions {
