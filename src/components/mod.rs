@@ -1,21 +1,66 @@
-use serde::Serialize;
-use statement::ControlFlowOptions;
+use root::Root;
+use stack::ExecutorStack;
+use values::Value;
 
 use crate::{
     errors::{self, ExecutionError, ParserError},
-    executor::{ExecutorContext, ExecutorStack, Value},
+    executor::ExecutorContext,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
+    Executor,
 };
 
-pub mod block;
-pub mod expressions;
-pub mod function;
-pub mod literals;
-pub mod operator;
-pub mod root;
-pub mod statement;
-pub mod type_definition;
+mod builtins;
+mod root;
+mod stack;
+mod values;
+
+pub struct ComponentTree {
+    root: Root,
+}
+
+pub struct ExecutionOutput {
+    exit_code: u8,
+}
+
+impl ExecutionOutput {
+    fn new(exit_code: u8) -> Self {
+        Self { exit_code }
+    }
+
+    pub fn exit_code(&self) -> u8 {
+        self.exit_code
+    }
+}
+
+pub fn parse<'a, I: IntoIterator<Item = &'a Token<'a>>>(
+    tokens: I,
+) -> Result<ComponentTree, ParserError> {
+    let tokens = &mut Backtrackable::new(tokens.into_iter());
+    let root = Root::parse(tokens).map_err(|mut err| {
+        if let Some(current) = tokens.peek() {
+            err.set_position(current);
+        }
+        return err;
+    })?;
+    Ok(ComponentTree { root })
+}
+
+impl ComponentTree {
+    pub fn execute(&mut self, executor: &mut Executor) -> Result<ExecutionOutput, ExecutionError> {
+        let mut stack = ExecutorStack::new();
+
+        let exit_code = self
+            .root
+            .execute(&mut stack, &mut executor.context)
+            .map_err(|mut err| {
+                err.set_call_stack(stack.get_call_stack().clone());
+                return err;
+            })?;
+
+        return Ok(ExecutionOutput::new(exit_code));
+    }
+}
 
 trait Tokens<'a> {
     fn next_value(&mut self) -> Option<&'a TokenValue<'a>>;
@@ -47,34 +92,6 @@ impl<'a, I: Iterator<Item = &'a Token<'a>>> Tokens<'a> for Backtrackable<I> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct Identifier {
-    pub value: String,
-}
-
-impl From<&str> for Identifier {
-    fn from(value: &str) -> Self {
-        Identifier {
-            value: value.to_owned(),
-        }
-    }
-}
-
-impl Parsable for Identifier {
-    fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
-        tokens: &mut Backtrackable<I>,
-    ) -> Result<Option<Self>, ParserError> {
-        Ok(
-            if let Some(TokenValue::Identifier(value)) = tokens.peek_value() {
-                tokens.next();
-                Some((*value).into())
-            } else {
-                None
-            },
-        )
-    }
-}
-
 trait Parsable
 where
     Self: Sized,
@@ -96,6 +113,13 @@ where
 }
 
 pub type EvaluationResult<T> = Result<T, EvaluationException>;
+
+pub enum ControlFlowOptions {
+    Exit(u8),
+    Return(Value),
+    Break(),
+    Continue(),
+}
 
 pub enum EvaluationException {
     AlterControlFlow(ControlFlowOptions),

@@ -1,12 +1,12 @@
 use serde::Serialize;
 
 use crate::{
-    executor::Value,
+    components::values::Value,
     lexer::{Token, TokenValue},
     ParserError,
 };
 
-use super::{errors::ExecutionError, Backtrackable, Tokens};
+use super::{Backtrackable, ExecutionError, Tokens};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum Operator {

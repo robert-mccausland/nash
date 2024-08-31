@@ -1,17 +1,24 @@
 use serde::Serialize;
+use statement::Statement;
 
-use crate::{
-    executor::{ExecutorContext, ExecutorStack},
-    lexer::Token,
-    utils::iterators::Backtrackable,
-};
+use crate::{executor::ExecutorContext, lexer::Token, utils::iterators::Backtrackable};
 
 use super::{
     errors::{ExecutionError, ParserError},
-    function::Function,
-    statement::{ControlFlowOptions, Statement},
-    EvaluationException, Tokens,
+    stack::ExecutorStack,
+    ControlFlowOptions, EvaluationException, Tokens,
 };
+
+pub use function::Function;
+
+mod block;
+mod expressions;
+mod function;
+mod identifier;
+mod literals;
+mod operator;
+mod statement;
+mod type_definition;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Root {

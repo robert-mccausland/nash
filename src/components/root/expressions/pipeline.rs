@@ -1,12 +1,17 @@
 use serde::Serialize;
 
 use crate::{
-    components::{Evaluatable, EvaluationResult, Identifier, Parsable, Tokens},
+    components::{
+        root::identifier::Identifier,
+        stack::ExecutorStack,
+        values::{FileMode, Value},
+        Evaluatable, EvaluationResult, Parsable, Tokens,
+    },
     constants::{AS, CAP, EXEC},
     errors::ExecutionError,
     executor::{
         commands::{CommandDefinition, PipelineDestination, PipelineSource},
-        FileMode, Value,
+        ExecutorContext,
     },
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
@@ -131,8 +136,8 @@ impl Parsable for PipelineExpression {
 impl Evaluatable for PipelineExpression {
     fn evaluate(
         &self,
-        stack: &mut crate::executor::ExecutorStack,
-        context: &mut crate::executor::ExecutorContext,
+        stack: &mut ExecutorStack,
+        context: &mut ExecutorContext,
     ) -> EvaluationResult<Value> {
         let mut pipeline = Pipeline {
             commands: Vec::new(),

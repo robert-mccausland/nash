@@ -1,13 +1,15 @@
 use serde::Serialize;
 
 use crate::{
-    components::{expressions::Expression, Evaluatable, EvaluationResult, Parsable, Tokens},
+    components::{
+        stack::ExecutorStack, values::Value, Evaluatable, EvaluationResult, Parsable, Tokens,
+    },
     constants::{ELSE, IF},
-    executor::{ExecutorContext, ExecutorStack, Value},
+    executor::ExecutorContext,
     lexer::TokenValue,
 };
 
-use super::Block;
+use super::{Block, Expression};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BranchExpression {

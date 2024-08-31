@@ -30,8 +30,8 @@ enum LexerContext {
     TemplateExpression(u32),
 }
 
-pub fn lex<'a>(file: &'a str) -> Tokens<'a> {
-    Tokens::new(file)
+pub fn lex<'a>(code: &'a str) -> Tokens<'a> {
+    Tokens::new(code)
 }
 
 pub struct Tokens<'a> {
@@ -42,11 +42,11 @@ pub struct Tokens<'a> {
 }
 
 impl<'a> Tokens<'a> {
-    pub fn new(file: &'a str) -> Self {
+    pub fn new(code: &'a str) -> Self {
         Self {
-            buffer: file,
+            buffer: code,
             next: (0, ""),
-            iterator: file.grapheme_indices(true).peekable(),
+            iterator: code.grapheme_indices(true).peekable(),
             context_stack: vec![LexerContext::Root],
         }
     }

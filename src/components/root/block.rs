@@ -1,16 +1,14 @@
 use serde::Serialize;
 
 use crate::{
-    executor::{ExecutorContext, ExecutorStack, Value},
+    components::{stack::ExecutorStack, values::Value, EvaluationResult},
+    executor::ExecutorContext,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
+    ExecutionError, ParserError,
 };
 
-use super::{
-    errors::{ExecutionError, ParserError},
-    statement::Statement,
-    EvaluationResult, Tokens,
-};
+use super::{statement::Statement, Tokens};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Block {

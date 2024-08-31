@@ -3,10 +3,10 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
     components::{
-        errors::ParserError, expressions::Expression, Evaluatable, EvaluationResult, Parsable,
-        Tokens,
+        errors::ParserError, root::expressions::Expression, stack::ExecutorStack, values::Value,
+        Evaluatable, EvaluationResult, Parsable, Tokens,
     },
-    executor::{ExecutorContext, ExecutorStack, Value},
+    executor::ExecutorContext,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
 };

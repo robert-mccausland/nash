@@ -1,0 +1,47 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'nash'",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=nash",
+          "--package=nash"
+        ],
+        "filter": {
+          "name": "nash",
+          "kind": "bin"
+        }
+      },
+      "args": [
+        ".\\examples\\example-22.nash"
+      ],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'nash'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=nash",
+          "--package=nash"
+        ],
+        "filter": {
+          "name": "nash",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

@@ -2,17 +2,17 @@ use serde::Serialize;
 
 use crate::{
     components::{
-        expressions::Expression, statement::ControlFlowOptions, Evaluatable, EvaluationException,
-        EvaluationResult, Identifier, Parsable, Tokens,
+        root::identifier::Identifier, stack::ExecutorStack, values::Value, ControlFlowOptions,
+        Evaluatable, EvaluationException, EvaluationResult, Parsable, Tokens,
     },
     constants::{FOR, IN, WHILE},
-    executor::{ExecutorContext, ExecutorStack, Value},
+    executor::ExecutorContext,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
     ParserError,
 };
 
-use super::Block;
+use super::{Block, Expression};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ForLoopExpression {

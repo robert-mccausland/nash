@@ -1,19 +1,12 @@
 use std::io::{stderr, stdin, stdout, BufRead, BufReader, Write};
 
-use crate::{components::root::Root, errors::ExecutionError, CommandExecutor};
-
-pub use stack::ExecutorStack;
+use crate::CommandExecutor;
 use system_command_executor::SystemCommandExecutor;
-pub use values::{FileMode, Type, Value};
-
-pub mod builtins;
 pub mod commands;
-mod stack;
 mod system_command_executor;
-mod values;
 
 pub struct ExecutorOptions {
-    max_call_stack_depth: usize,
+    pub max_call_stack_depth: usize,
 }
 
 impl ExecutorOptions {
@@ -33,7 +26,7 @@ pub struct ExecutorContext<'a> {
 }
 
 pub struct Executor<'a> {
-    context: ExecutorContext<'a>,
+    pub context: ExecutorContext<'a>,
 }
 
 impl<'a> Executor<'a> {
@@ -68,32 +61,5 @@ impl<'a> Executor<'a> {
             stderr(),
             ExecutorOptions::default(),
         )
-    }
-
-    pub(crate) fn execute(&mut self, root: &Root) -> Result<ExecutionOutput, ExecutionError> {
-        let mut stack = ExecutorStack::new();
-
-        let exit_code = root
-            .execute(&mut stack, &mut self.context)
-            .map_err(|mut err| {
-                err.set_call_stack(stack.get_call_stack().clone());
-                return err;
-            })?;
-
-        return Ok(ExecutionOutput::new(exit_code));
-    }
-}
-
-pub struct ExecutionOutput {
-    exit_code: u8,
-}
-
-impl ExecutionOutput {
-    fn new(exit_code: u8) -> Self {
-        Self { exit_code }
-    }
-
-    pub fn exit_code(&self) -> u8 {
-        self.exit_code
     }
 }

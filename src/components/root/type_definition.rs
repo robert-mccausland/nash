@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use crate::{
-    executor::Type,
+    components::values::Type,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
     ParserError,

@@ -1,7 +1,8 @@
 use serde::Serialize;
 
 use crate::{
-    components::{Evaluatable, Parsable, Tokens},
+    components::{stack::ExecutorStack, values::Value, Evaluatable, Parsable, Tokens},
+    executor::ExecutorContext,
     lexer::TokenValue,
 };
 
@@ -39,9 +40,9 @@ impl Parsable for BracketExpression {
 impl Evaluatable for BracketExpression {
     fn evaluate(
         &self,
-        stack: &mut crate::executor::ExecutorStack,
-        context: &mut crate::executor::ExecutorContext,
-    ) -> crate::components::EvaluationResult<crate::executor::Value> {
+        stack: &mut ExecutorStack,
+        context: &mut ExecutorContext,
+    ) -> crate::components::EvaluationResult<Value> {
         self.inner.evaluate(stack, context)
     }
 }

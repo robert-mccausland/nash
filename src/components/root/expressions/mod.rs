@@ -1,7 +1,9 @@
 use crate::{
-    executor::{ExecutorContext, ExecutorStack, Value},
+    components::{stack::ExecutorStack, values::Value, EvaluationResult},
+    executor::ExecutorContext,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
+    ParserError,
 };
 
 mod block;
@@ -14,10 +16,9 @@ mod variable;
 
 use super::{
     block::Block,
-    errors::ParserError,
     literals::{BooleanLiteral, CommandLiteral, IntegerLiteral, StringLiteral},
     operator::Operator,
-    EvaluationResult, Tokens,
+    Tokens,
 };
 
 use block::BlockExpression;

@@ -1,15 +1,14 @@
 use std::collections::HashMap;
 
 use crate::{
-    components::{
-        function::Function, statement::ControlFlowOptions, EvaluationException, EvaluationResult,
-    },
+    components::{ControlFlowOptions, EvaluationException, EvaluationResult},
     constants::UNDERSCORE,
     ExecutionError,
 };
 
 use super::{
     builtins,
+    root::Function,
     values::{Type, Value},
     ExecutorContext,
 };

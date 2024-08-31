@@ -1,11 +1,8 @@
 use std::cell::RefCell;
 
-use crate::errors::ExecutionError;
+use crate::{errors::ExecutionError, executor::ExecutorContext};
 
-use super::{
-    values::{FileMode, Type, Value},
-    ExecutorContext,
-};
+use super::values::{FileMode, Type, Value};
 
 pub fn call_builtin(
     name: &str,

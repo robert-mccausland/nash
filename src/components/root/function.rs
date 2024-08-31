@@ -1,15 +1,14 @@
 use serde::Serialize;
 
 use crate::{
+    components::values::Type,
     constants::FUNC,
-    executor::Type,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
+    ParserError,
 };
 
-use super::{
-    block::Block, errors::ParserError, type_definition::TypeDefinition, Identifier, Tokens,
-};
+use super::{block::Block, identifier::Identifier, type_definition::TypeDefinition, Tokens};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Function {

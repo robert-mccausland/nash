@@ -1,7 +1,8 @@
 use crate::{
+    components::{stack::ExecutorStack, values::Value, Evaluatable, EvaluationResult, Parsable},
     constants::{FALSE, TRUE},
     errors::ParserError,
-    executor::{ExecutorContext, ExecutorStack, Value},
+    executor::ExecutorContext,
     lexer::{Token, TokenValue},
 };
 
@@ -12,7 +13,7 @@ pub use command::CommandLiteral;
 use serde::Serialize;
 pub use string::StringLiteral;
 
-use super::{Backtrackable, Evaluatable, EvaluationResult, Parsable, Tokens};
+use super::{Backtrackable, Tokens};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct IntegerLiteral {

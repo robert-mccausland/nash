@@ -1,16 +1,16 @@
 use serde::Serialize;
 
 use crate::{
+    components::{stack::ExecutorStack, values::Value, ControlFlowOptions, EvaluationResult},
     constants::{BREAK, CONTINUE, EXIT, RETURN, VAR},
-    executor::{ExecutorContext, ExecutorStack, Value},
+    executor::ExecutorContext,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
-    ExecutionError,
+    ExecutionError, ParserError,
 };
 
 use super::{
-    errors::ParserError, expressions::Expression, type_definition::TypeDefinition,
-    EvaluationResult, Identifier, Tokens,
+    expressions::Expression, identifier::Identifier, type_definition::TypeDefinition, Tokens,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -21,13 +21,6 @@ pub enum Statement {
     Expression(Expression),
     Exit(Expression),
     Return(Expression),
-    Break(),
-    Continue(),
-}
-
-pub enum ControlFlowOptions {
-    Exit(u8),
-    Return(Value),
     Break(),
     Continue(),
 }

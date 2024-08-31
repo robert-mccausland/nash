@@ -1,8 +1,10 @@
 use serde::Serialize;
 
 use crate::{
-    components::{Evaluatable, EvaluationResult, Parsable, Tokens},
-    executor::{ExecutorContext, ExecutorStack, Value},
+    components::{
+        stack::ExecutorStack, values::Value, Evaluatable, EvaluationResult, Parsable, Tokens,
+    },
+    executor::ExecutorContext,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
     ParserError,

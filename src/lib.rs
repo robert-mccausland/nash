@@ -1,12 +1,13 @@
 use std::fmt::{Error, Write};
 use std::io::Read;
 
+use components::ExecutionOutput;
 pub use errors::{ExecutionError, LexerError, NashError, ParserError};
 pub use executor::commands::{
     CommandDefinition, CommandExecutor, CommandOutput, Pipeline, PipelineDestination,
     PipelineOutput, PipelineSource,
 };
-pub use executor::ExecutionOutput;
+
 pub use executor::{Executor, ExecutorOptions};
 
 mod components;
@@ -14,7 +15,6 @@ mod constants;
 mod errors;
 mod executor;
 mod lexer;
-mod parser;
 mod utils;
 
 pub fn execute<R: Read>(
@@ -37,7 +37,7 @@ pub fn execute<R: Read>(
             return err;
         })?;
 
-    let root = parser::parse(tokens).map_err(|err| {
+    let mut component_tree = components::parse(tokens.iter()).map_err(|err| {
         eprintln!("Error parsing script:");
         eprintln!(
             "{}",
@@ -46,7 +46,7 @@ pub fn execute<R: Read>(
         return err;
     })?;
 
-    let result = executor.execute(&root).map_err(|err| {
+    let result = component_tree.execute(executor).map_err(|err| {
         eprintln!("Error executing script: {err}");
         if let Some(call_stack) = &err.call_stack {
             let formatted_stack = call_stack
