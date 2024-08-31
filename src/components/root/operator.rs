@@ -71,9 +71,10 @@ impl Operator {
         use Operator::*;
         use Value::*;
 
-        // Trust me its really not that bad
+        // I kinda hate how this looks but also its sorta just fine
         match (self, left, right) {
             (Addition, Integer(left), Integer(right)) => Ok((left + right).into()),
+            (Addition, String(left), String(right)) => Ok((left + right.as_str()).into()),
             (Subtraction, Integer(left), Integer(right)) => Ok((left - right).into()),
             (Multiplication, Integer(left), Integer(right)) => Ok((left * right).into()),
             (Division, Integer(left), Integer(right)) => Ok((left / right).into()),
@@ -84,10 +85,6 @@ impl Operator {
             (GreaterThan, Integer(left), Integer(right)) => Ok((left > right).into()),
             (LessThanOrEqual, Integer(left), Integer(right)) => Ok((left <= right).into()),
             (GreaterThanOrEqual, Integer(left), Integer(right)) => Ok((left >= right).into()),
-            // (Arrow, Command(left), Command(right)) => Ok(Command(left.pipe(right)?)),
-            // (Arrow, String(left), Command(right)) => {
-            //     Ok(Command(crate::Pipeline::literal(left).pipe(right)?))
-            // }
             (And, Boolean(left), Boolean(right)) => Ok((left && right).into()),
             (Or, Boolean(left), Boolean(right)) => Ok((left || right).into()),
             (operator, left, right) => {

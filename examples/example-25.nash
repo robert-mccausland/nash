@@ -1,0 +1,35 @@
+#!/bin/nash
+
+# Checking that large reads and writes work, sometimes small reads don't fill up buffers so they
+# don't deadlock in situations where a large write will.
+
+func write_kb(path: string) {
+  var string = "0000000000000000";
+  var buffer = "";
+  while buffer.len() < 1024 {
+    buffer = buffer + string;
+  };
+
+  exec buffer => append(path);
+}
+
+func write_mb(path: string) {
+  var size_kb = 0;
+  while size_kb < 1024 {
+    write_kb(path);
+    size_kb = size_kb + 1;
+  };
+}
+
+
+var path = "./examples/example-output.txt";
+exec "" => write(path);
+
+out("writing...");
+write_mb(path);
+
+out("reading...");
+var data = exec open(path) => `grep 0000`;
+out(data.len().fmt());
+
+exec "" => write(path);

@@ -99,15 +99,15 @@ enum OutputType {
 pub fn run_pipeline(pipeline: &Pipeline) -> io::Result<PipelineOutput> {
     let (mut processes, final_output) = spawn_processes(pipeline)?;
 
+    let stdout = if let Some(destination) = &pipeline.destination {
+        final_output.write_to_destination(destination)?;
+        None
+    } else {
+        Some(final_output.write_to_string()?)
+    };
+
     let mut outputs = Vec::new();
     for process in &mut processes {
-        let status = process.wait()?;
-        let status_code = status
-            .code()
-            .ok_or(io::Error::other("Unable to get exit code for command"))?
-            .try_into()
-            .map_err(|_| io::Error::other("Exit code was not between 0 and 255"))?;
-
         let mut stderr_data = None;
         if let Some(mut stderr) = process.stderr.take() {
             let mut buffer = String::new();
@@ -115,15 +115,15 @@ pub fn run_pipeline(pipeline: &Pipeline) -> io::Result<PipelineOutput> {
             stderr_data = Some(buffer);
         }
 
+        let status = process.wait()?;
+        let status_code = status
+            .code()
+            .ok_or(io::Error::other("Unable to get exit code for command"))?
+            .try_into()
+            .map_err(|_| io::Error::other("Exit code was not between 0 and 255"))?;
+
         outputs.push(CommandOutput::new(status_code, stderr_data));
     }
-
-    let stdout = if let Some(destination) = &pipeline.destination {
-        final_output.write_to_destination(destination)?;
-        None
-    } else {
-        Some(final_output.write_to_string()?)
-    };
 
     return Ok(PipelineOutput::new(stdout, outputs));
 }
