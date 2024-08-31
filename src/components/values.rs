@@ -72,12 +72,23 @@ impl Display for Value {
             Value::Integer(data) => data.fmt(f)?,
             Value::Boolean(data) => data.fmt(f)?,
             Value::Command(program, arguments) => {
-                let combined = Some(program).into_iter().chain(arguments.iter());
+                let combined = Some(program)
+                    .into_iter()
+                    .chain(arguments.iter())
+                    .map(|x| Value::String(x.to_owned()));
                 fmt_collection("`", " ", "`", combined, f)?
             }
             Value::Array(data, _) => fmt_collection("[", ",", "]", data.borrow().iter(), f)?,
             Value::Tuple(data) => fmt_collection("(", ",", ")", data.iter(), f)?,
-            Value::FileHandle(_, _) => f.write_str("file_handle")?,
+            Value::FileHandle(path, mode) => {
+                match mode {
+                    FileMode::Open => f.write_str("<file_handle:open(")?,
+                    FileMode::Write => f.write_str("<file_handle:write(")?,
+                    FileMode::Append => f.write_str("<file_handle:append(")?,
+                };
+                Value::String(path.to_owned()).fmt(f)?;
+                f.write_str(")>")?;
+            }
         };
 
         return Ok(());

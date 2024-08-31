@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\n    out(`my_command arg1 \"arg two\" \"another \\\"one\\\"\"`.fmt());\n    \"#,\n    \"\", |_| {})"
+---
+stdout: "`\"my_command\" \"arg1\" \"arg two\" \"another \\\"one\\\"\"`\n"
+stderr: ""
+error: ~
+exit_code: 0

@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"        \n        out(write(\"file.txt\").fmt());\n        out(open(\"test file\").fmt());\n        out(append(\"test \\\"file\\\"\").fmt());\n    \"#,\n    \"\", |_| {})"
+---
+stdout: "<file_handle:write(\"file.txt\")>\n<file_handle:open(\"test file\")>\n<file_handle:append(\"test \\\"file\\\"\")>\n"
+stderr: ""
+error: ~
+exit_code: 0

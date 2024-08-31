@@ -1,16 +1,69 @@
 #[cfg(test)]
 mod tests {
+    use core::str;
     use insta::assert_yaml_snapshot;
     use mockall::{mock, predicate};
     use nash::*;
     use serde::Serialize;
-    use std::io::{BufReader, Result as IoResult};
+    use std::io::{self, BufReader, Cursor};
+
+    struct MockExecutor<P: PipelineExecutor> {
+        stdin: <Self as Executor>::Stdin,
+        stdout: <Self as Executor>::Stdout,
+        stderr: <Self as Executor>::Stderr,
+        options: ExecutorOptions,
+        pipeline_executor: P,
+    }
+
+    impl<P: PipelineExecutor> MockExecutor<P> {
+        fn new(input: &str, pipeline_executor: P) -> Self {
+            Self {
+                stdin: BufReader::new(Cursor::new(
+                    input.to_owned().into_bytes().into_boxed_slice(),
+                )),
+                stdout: Vec::new(),
+                stderr: Vec::new(),
+                options: ExecutorOptions::default(),
+                pipeline_executor,
+            }
+        }
+    }
+
+    impl<P: PipelineExecutor> Executor for MockExecutor<P> {
+        type Stdin = BufReader<Cursor<Box<[u8]>>>;
+        type Stdout = Vec<u8>;
+        type Stderr = Vec<u8>;
+
+        fn stdin(&mut self) -> &mut Self::Stdin {
+            &mut self.stdin
+        }
+
+        fn stdout(&mut self) -> &mut Self::Stdout {
+            &mut self.stdout
+        }
+
+        fn stderr(&mut self) -> &mut Self::Stderr {
+            &mut self.stderr
+        }
+
+        fn run_pipeline(&self, pipeline: &Pipeline) -> io::Result<PipelineOutput> {
+            self.pipeline_executor.run_pipeline(pipeline)
+        }
+
+        fn options(&self) -> &ExecutorOptions {
+            &self.options
+        }
+    }
+
+    trait PipelineExecutor {
+        fn run_pipeline(&self, pipeline: &Pipeline) -> io::Result<PipelineOutput>;
+    }
 
     mock! {
-        pub CommandExecutor {}
+        PipelineExecutor {}
 
-        impl CommandExecutor for CommandExecutor {
-            fn run(&self, command: &Pipeline) -> IoResult<PipelineOutput>;
+        impl PipelineExecutor for PipelineExecutor {
+            fn run_pipeline(&self, pipeline: &Pipeline) -> io::Result<PipelineOutput>;
         }
     }
 
@@ -22,39 +75,24 @@ mod tests {
         exit_code: u8,
     }
 
-    fn run_code<F: FnOnce(&mut MockCommandExecutor)>(
+    fn run_code<F: FnOnce(&mut MockPipelineExecutor)>(
         script: &str,
         input: &str,
         setup: F,
     ) -> CodeOutput {
-        let input = input.as_bytes().to_vec();
-        let mut mock_command_executor = MockCommandExecutor::new();
-        let mut mock_in = BufReader::new(&input[..]);
-        let mut mock_out = Vec::new();
-        let mut mock_err = Vec::new();
+        let mut mock_pipeline_executor = MockPipelineExecutor::new();
+        setup(&mut mock_pipeline_executor);
 
-        setup(&mut mock_command_executor);
-
-        let result = {
-            let mut executor = Executor::new(
-                mock_command_executor,
-                &mut mock_in,
-                &mut mock_out,
-                &mut mock_err,
-                ExecutorOptions::default(),
-            );
-
-            nash::execute(&mut script.as_bytes(), &mut executor)
-        };
-
+        let mut mock_executor = MockExecutor::new(input, mock_pipeline_executor);
+        let result = nash::execute(&mut script.as_bytes(), &mut mock_executor);
         let exit_code = match &result {
             Ok(output) => output.exit_code(),
             Err(error) => error.exit_code(),
         };
 
         return CodeOutput {
-            stdout: String::from_utf8(mock_out).unwrap(),
-            stderr: String::from_utf8(mock_err).unwrap(),
+            stdout: str::from_utf8(mock_executor.stdout()).unwrap().to_owned(),
+            stderr: str::from_utf8(mock_executor.stderr()).unwrap().to_owned(),
             error: result.err(),
             exit_code,
         };
@@ -105,7 +143,7 @@ main();
         "",
         |mock_command_executor| {
             mock_command_executor
-                .expect_run()
+                .expect_run_pipeline()
                 .with(predicate::eq(Pipeline::new(
                     vec![CommandDefinition::new(
                         "echo".to_owned(),
@@ -514,7 +552,7 @@ out(code.fmt());
         "",
         |executor| {
             executor
-                .expect_run()
+                .expect_run_pipeline()
                 .with(predicate::eq::<Pipeline>(["my_command"].into()))
                 .return_once(|_| Ok(PipelineOutput::new(None, Some(69.into()))))
                 .once();
@@ -530,7 +568,7 @@ out(code.fmt());
         "",
         |executor| {
             executor
-                .expect_run()
+                .expect_run_pipeline()
                 .with(predicate::eq::<Pipeline>(["my_command"].into()))
                 .return_once(|_| Ok(PipelineOutput::new(None, Some(69.into()))))
                 .once();
@@ -546,7 +584,7 @@ out(stderr.fmt());
         "",
         |executor| {
             executor
-                .expect_run()
+                .expect_run_pipeline()
                 .with(predicate::eq::<Pipeline>(Pipeline::new(
                     vec![CommandDefinition::new(
                         "my_command".to_owned(),
@@ -577,7 +615,7 @@ exec `command1` => `command2`;
         "",
         |executor| {
             executor
-                .expect_run()
+                .expect_run_pipeline()
                 .with(predicate::eq::<Pipeline>(["command1", "command2"].into()))
                 .return_once(|_| Ok(pipeline_success("", 2)))
                 .once();
@@ -593,7 +631,7 @@ out(output);
         "",
         |executor| {
             executor
-                .expect_run()
+                .expect_run_pipeline()
                 .with(predicate::eq::<Pipeline>(["command1"].into()))
                 .return_once(|_| Ok(pipeline_success("hello!", 1)))
                 .once();
@@ -608,7 +646,7 @@ exec open("file") => `command1`;
         "",
         |executor| {
             executor
-                .expect_run()
+                .expect_run_pipeline()
                 .with(predicate::eq::<Pipeline>(Pipeline::new(
                     vec!["command1".into()],
                     Some(PipelineSource::File("file".to_owned())),
@@ -627,7 +665,7 @@ exec `command1` => write("file");
         "",
         |executor| {
             executor
-                .expect_run()
+                .expect_run_pipeline()
                 .with(predicate::eq::<Pipeline>(Pipeline::new(
                     vec!["command1".into()],
                     None,
@@ -668,7 +706,7 @@ exec input => `command`;
         "",
         |executor| {
             executor
-                .expect_run()
+                .expect_run_pipeline()
                 .with(predicate::eq::<Pipeline>(Pipeline::new(
                     vec!["command".into()],
                     Some(PipelineSource::Literal("input string\n".to_owned())),
@@ -687,7 +725,7 @@ exec "append me!" => append("file_path");
         "",
         |executor| {
             executor
-                .expect_run()
+                .expect_run_pipeline()
                 .with(predicate::eq::<Pipeline>(Pipeline::new(
                     vec![],
                     Some(PipelineSource::Literal("append me!\n".to_owned())),
@@ -714,7 +752,7 @@ out((exit_code, stderr, exit_code_2, stderr_2).fmt());
         "",
         |executor| {
             executor
-                .expect_run()
+                .expect_run_pipeline()
                 .with(predicate::eq::<Pipeline>(Pipeline::new(
                     vec![
                         CommandDefinition::new("command1".to_owned(), Vec::new(), true),
@@ -734,5 +772,21 @@ out((exit_code, stderr, exit_code_2, stderr_2).fmt());
                 })
                 .once();
         }
+    );
+
+    nash_test!(
+        should_format_commands_correctly,
+        r#"
+    out(`my_command arg1 "arg two" "another \"one\""`.fmt());
+    "#
+    );
+
+    nash_test!(
+        should_format_file_handles_correctly,
+        r#"        
+        out(write("file.txt").fmt());
+        out(open("test file").fmt());
+        out(append("test \"file\"").fmt());
+    "#
     );
 }
