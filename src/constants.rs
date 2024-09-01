@@ -33,5 +33,6 @@ define_keywords!(
     CONTINUE => "continue",
     EXIT => "exit",
     CAP => "cap",
-    AS => "as"
+    AS => "as",
+    MUT => "mut"
 );

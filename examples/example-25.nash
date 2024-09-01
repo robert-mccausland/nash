@@ -1,11 +1,11 @@
 #!/bin/nash
 
-# Checking that large reads and writes work, sometimes small reads don't fill up buffers so they
-# don't deadlock in situations where a large write will.
+# Checking that large reads and writes work, small reads / writes don't fill up internal buffers so they
+# don't deadlock in situations where a large read / write will.
 
 func write_kb(path: string) {
   var string = "0000000000000000";
-  var buffer = "";
+  var mut buffer = "";
   while buffer.len() < 1024 {
     buffer = buffer + string;
   };
@@ -14,7 +14,7 @@ func write_kb(path: string) {
 }
 
 func write_mb(path: string) {
-  var size_kb = 0;
+  var mut size_kb = 0;
   while size_kb < 1024 {
     write_kb(path);
     size_kb = size_kb + 1;

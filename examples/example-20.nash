@@ -3,7 +3,7 @@
 # Exit
 
 func main() {
-  var index = 0;
+  var mut index = 0;
   while true {
     index = index + 1;
 

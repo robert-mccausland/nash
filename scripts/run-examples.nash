@@ -5,7 +5,7 @@ var failures = [""];
 failures.pop();
 
 for script in glob("./examples/*.nash") {
-  var input = "";
+  var mut input = "";
 
   # This script requires user input...
   if script.ends_with("example-21.nash") {

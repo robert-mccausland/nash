@@ -15,7 +15,7 @@ for value in data {
 out("Done for loop!");
 out("");
 
-var index = 0;
+var mut index = 0;
 while true {
   index = index + 1;
 

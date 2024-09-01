@@ -134,8 +134,7 @@ impl Evaluatable for PipelineExpression {
     fn evaluate<E: Executor>(
         &self,
         stack: &mut Stack,
-        executor: &mut E
-,
+        executor: &mut E,
     ) -> EvaluationResult<Value> {
         let mut pipeline = Pipeline {
             commands: Vec::new(),
@@ -214,9 +213,10 @@ impl Evaluatable for PipelineExpression {
 
         for (command_output, command) in result.command_outputs.into_iter().zip(local_commands) {
             if let Some(capture_exit_code) = &command.capture_exit_code {
-                stack.declare_and_assign_variable(
+                stack.declare_variable_init(
                     &capture_exit_code.value,
                     (command_output.exit_code as i32).into(),
+                    true,
                 )?;
             } else if command_output.exit_code != 0 {
                 return Err(format!(
@@ -227,9 +227,10 @@ impl Evaluatable for PipelineExpression {
             }
 
             if let Some(capture_stderr) = &command.capture_stderr {
-                stack.declare_and_assign_variable(
+                stack.declare_variable_init(
                     &capture_stderr.value,
                     command_output.stderr.unwrap_or_default().into(),
+                    true,
                 )?;
             }
         }

@@ -1,7 +1,7 @@
 #!/bin/nash
 
 # While example
-var count = 0;
+var mut count = 0;
 while count < 10 {
   out(count.fmt());
   count = count + 1;

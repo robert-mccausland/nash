@@ -2,7 +2,7 @@ use serde::Serialize;
 
 use crate::{
     components::{stack::Stack, values::Value, ControlFlowOptions, EvaluationResult},
-    constants::{BREAK, CONTINUE, EXIT, RETURN, VAR},
+    constants::{BREAK, CONTINUE, EXIT, MUT, RETURN, VAR},
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
     ExecutionError, Executor, ParserError,
@@ -15,7 +15,7 @@ use super::{
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum Statement {
     Declaration(Identifier, TypeDefinition),
-    DeclarationAssignment(Assignment, Expression),
+    DeclarationAssignment(bool, Assignment, Expression),
     Assignment(Assignment, Expression),
     Expression(Expression),
     Exit(Expression),
@@ -36,11 +36,15 @@ impl Statement {
         return Ok(statement);
     }
 
-    pub fn execute<E: Executor>(&self, stack: &mut Stack, executor: &mut E
-) -> EvaluationResult<Value> {
+    pub fn execute<E: Executor>(
+        &self,
+        stack: &mut Stack,
+        executor: &mut E,
+    ) -> EvaluationResult<Value> {
         match self {
             Statement::Declaration(variable_name, type_definition) => {
-                stack.declare_variable(&variable_name.value, type_definition.value.clone())?;
+                stack
+                    .declare_variable_uninit(&variable_name.value, type_definition.value.clone())?;
             }
             Statement::Assignment(assignment, expression) => {
                 let result = expression.evaluate(stack, executor)?;
@@ -65,11 +69,11 @@ impl Statement {
                     }
                 }
             }
-            Statement::DeclarationAssignment(assignment, expression) => {
+            Statement::DeclarationAssignment(mutable, assignment, expression) => {
                 let result = expression.evaluate(stack, executor)?;
                 match assignment {
                     Assignment::Simple(identifier) => {
-                        stack.declare_and_assign_variable(&identifier.value, result)?;
+                        stack.declare_variable_init(&identifier.value, result, *mutable)?;
                     }
                     Assignment::Tuple(identifiers) => {
                         let Value::Tuple(result) = result else {
@@ -83,7 +87,7 @@ impl Statement {
                         }
 
                         for (identifier, result) in identifiers.iter().zip(result) {
-                            stack.declare_and_assign_variable(&identifier.value, result)?;
+                            stack.declare_variable_init(&identifier.value, result, true)?;
                         }
                     }
                 }
@@ -120,8 +124,17 @@ impl Statement {
         // Any statement starting with var must be a declaration
         if let Some(TokenValue::Keyword(VAR)) = next {
             tokens.next();
+
+            let mutable = if let Some(TokenValue::Keyword(MUT)) = tokens.peek_value() {
+                tokens.next();
+                true
+            } else {
+                false
+            };
+
             return if let Some(assignment) = Assignment::try_parse(tokens) {
                 Ok(Statement::DeclarationAssignment(
+                    mutable,
                     assignment,
                     Expression::parse(tokens)?,
                 ))
@@ -136,6 +149,11 @@ impl Statement {
                 tokens.next();
 
                 let type_definition = TypeDefinition::parse(tokens)?;
+
+                if !mutable {
+                    return Err("Uninitialized variable must be mutable".into());
+                }
+
                 Ok(Statement::Declaration((*value).into(), type_definition))
             };
         }

@@ -186,7 +186,7 @@ var variable = [];
     nash_test!(
         should_error_when_assigning_variable_to_wrong_type,
         r#"
-var variable = "test";
+var mut variable = "test";
 variable = 42;
 "#
     );
@@ -194,7 +194,7 @@ variable = 42;
     nash_test!(
         should_error_when_resolving_uninitialized_variable,
         r#"
-var variable: string;
+var mut variable: string;
 out(variable);
 "#
     );
@@ -277,7 +277,7 @@ var my_variable = test();
     nash_test!(
         should_error_when_declaring_a_variable_of_type_void,
         r#"
-var test: void;
+var mut test: void;
 "#
     );
 
@@ -291,7 +291,7 @@ func test(arg: void) {}
     nash_test!(
         should_break_from_while_loop,
         r#"
-var index = 0;
+var mut index = 0;
 while true {
   index = index + 1;
   if index == 5 {
@@ -305,7 +305,7 @@ while true {
     nash_test!(
         should_continue_in_while_loop,
         r#"
-var index = 0;
+var mut index = 0;
 while index < 5 {
     index = index + 1;
     if index == 2 {
@@ -788,5 +788,30 @@ out((exit_code, stderr, exit_code_2, stderr_2).fmt());
         out(open("test file").fmt());
         out(append("test \"file\"").fmt());
     "#
+    );
+
+    nash_test!(
+        should_fail_to_mutate_non_mutable_variable,
+        r#"
+        var variable = "test";
+        variable = "something else!";
+        "#
+    );
+
+    nash_test!(
+        should_fail_to_create_non_mutable_uninitialized_variable,
+        r#"
+        var variable: string;
+        "#
+    );
+
+    nash_test!(
+        should_be_able_to_mutate_mutable_value,
+        r#"
+        var mut variable = "test1";
+        out(variable);
+        variable = "test2";
+        out(variable);
+        "#
     );
 }

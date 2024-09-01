@@ -14,7 +14,7 @@ use super::{
 
 pub struct Stack {
     functions: HashMap<String, Function>,
-    scopes: Vec<ExecutorScope>,
+    scopes: Vec<Scope>,
     call_stack: Vec<String>,
 }
 
@@ -32,22 +32,11 @@ impl Stack {
     }
 
     pub fn push_scope(&mut self) {
-        self.scopes.push(ExecutorScope::new());
+        self.scopes.push(Scope::new());
     }
 
     pub fn pop_scope(&mut self) {
         self.scopes.pop();
-    }
-
-    pub fn declare_and_assign_variable(
-        &mut self,
-        variable_name: &str,
-        value: Value,
-    ) -> Result<(), ExecutionError> {
-        self.declare_variable(variable_name, value.get_type())?;
-        self.assign_variable(variable_name, value)?;
-
-        Ok(())
     }
 
     pub fn assign_variable(
@@ -55,19 +44,16 @@ impl Stack {
         variable_name: &str,
         value: Value,
     ) -> Result<(), ExecutionError> {
+        // TODO - maybe we can make this unsupported if we drop tuple destructing?
         if variable_name == UNDERSCORE {
             return Ok(());
         }
 
         if let Some(variable) = self.get_variable_mut(variable_name) {
-            let variable_type = &variable.value_type;
-            let value_type = value.get_type();
-            if *variable_type != value_type {
-                return Err(
-                  format!("Can not assign a value of type {variable_type} to a variable of type {value_type}").into(),
-              );
+            if !variable.mutable {
+                return Err(format!("Can't assign to a variable that is not mutable").into());
             }
-            variable.value = Some(value);
+            Self::set_variable(variable, value)?;
         } else {
             return Err(format!("Couldn't find variable with name: {variable_name}.").into());
         }
@@ -75,21 +61,62 @@ impl Stack {
         Ok(())
     }
 
-    pub fn declare_variable(
+    pub fn declare_variable_init(
+        &mut self,
+        variable_name: &str,
+        value: Value,
+        mutable: bool,
+    ) -> Result<(), ExecutionError> {
+        self.declare_variable(variable_name, value.get_type(), mutable, Some(value))
+    }
+
+    pub fn declare_variable_uninit(
         &mut self,
         variable_name: &str,
         value_type: Type,
+    ) -> Result<(), ExecutionError> {
+        self.declare_variable(variable_name, value_type, true, None)
+    }
+
+    fn declare_variable(
+        &mut self,
+        variable_name: &str,
+        value_type: Type,
+        mutable: bool,
+        initial_value: Option<Value>,
     ) -> Result<(), ExecutionError> {
         if value_type == Type::Void {
             return Err("Variables must not be declared with a type of void".into());
         }
 
+        // TODO - ensure these still get assigned to the scope?
         if variable_name == UNDERSCORE {
             return Ok(());
         }
 
         let last_scope = self.scopes.last_mut().unwrap();
-        last_scope.declare_variable(variable_name, value_type);
+        last_scope.declare_variable(variable_name, value_type, mutable);
+
+        if let Some(initial_value) = initial_value {
+            Self::set_variable(
+                last_scope.get_variable_mut(variable_name).unwrap(),
+                initial_value,
+            )?;
+        }
+
+        Ok(())
+    }
+
+    fn set_variable(variable: &mut Variable, value: Value) -> Result<(), ExecutionError> {
+        let variable_type = &variable.value_type;
+        let value_type = value.get_type();
+        if *variable_type != value_type {
+            return Err(format!(
+                "Can not assign a value of type {variable_type} to a variable of type {value_type}"
+            )
+            .into());
+        }
+        variable.value = Some(value);
 
         Ok(())
     }
@@ -185,7 +212,7 @@ impl Stack {
                         )
                         .into());
                     }
-                    stack.declare_and_assign_variable(&name.value, value)?;
+                    stack.declare_variable_init(&name.value, value, true)?;
                 }
 
                 Ok(())
@@ -241,12 +268,12 @@ impl Stack {
         None
     }
 }
-struct ExecutorScope {
+struct Scope {
     variables: HashMap<String, Variable>,
     hidden_variables: Vec<Variable>,
 }
 
-impl ExecutorScope {
+impl Scope {
     fn new() -> Self {
         Self {
             variables: HashMap::new(),
@@ -254,14 +281,14 @@ impl ExecutorScope {
         }
     }
 
-    pub fn declare_variable(&mut self, variable_name: &str, value_type: Type) {
+    pub fn declare_variable(&mut self, variable_name: &str, value_type: Type, mutable: bool) {
         if variable_name == UNDERSCORE {
             return;
         }
 
         if let Some(old) = self
             .variables
-            .insert(variable_name.to_owned(), Variable::new(value_type))
+            .insert(variable_name.to_owned(), Variable::new(value_type, mutable))
         {
             // Keep any hidden variables in scope until this scope ends, this means
             // the deconstruction of them will still happen at the same time if they
@@ -282,13 +309,15 @@ impl ExecutorScope {
 struct Variable {
     pub value: Option<Value>,
     pub value_type: Type,
+    pub mutable: bool,
 }
 
 impl Variable {
-    fn new(value_type: Type) -> Self {
+    fn new(value_type: Type, mutable: bool) -> Self {
         Self {
             value: None,
             value_type,
+            mutable,
         }
     }
 }

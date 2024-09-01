@@ -53,8 +53,7 @@ impl Evaluatable for ForLoopExpression {
     fn evaluate<E: Executor>(
         &self,
         stack: &mut Stack,
-        executor: &mut E
-,
+        executor: &mut E,
     ) -> EvaluationResult<Value> {
         let Value::Array(array, _) = self.array_expression.evaluate(stack, executor)? else {
             return Err("for ... in loop must be used on an array value".into());
@@ -62,7 +61,7 @@ impl Evaluatable for ForLoopExpression {
 
         for item in array.as_ref().borrow().iter() {
             let result = self.loop_body.execute_with_initializer(
-                |stack| stack.declare_and_assign_variable(&self.item_name.value, item.clone()),
+                |stack| stack.declare_variable_init(&self.item_name.value, item.clone(), true),
                 stack,
                 executor,
             );
@@ -115,8 +114,7 @@ impl Evaluatable for WhileLoopExpression {
     fn evaluate<E: Executor>(
         &self,
         stack: &mut Stack,
-        executor: &mut E
-,
+        executor: &mut E,
     ) -> EvaluationResult<Value> {
         loop {
             let Value::Boolean(check_result) = self.check_expression.evaluate(stack, executor)?

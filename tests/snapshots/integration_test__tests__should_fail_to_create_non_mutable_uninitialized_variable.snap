@@ -1,0 +1,13 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\n        var variable: string;\n        \"#, \"\", |_| {})"
+---
+stdout: ""
+stderr: ""
+error:
+  ParserError:
+    message: Uninitialized variable must be mutable
+    token: Semicolon
+    start: 29
+    end: 30
+exit_code: 102

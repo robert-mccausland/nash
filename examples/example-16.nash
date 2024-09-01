@@ -2,7 +2,7 @@
 
 # Uninitialized variables
 
-var test: string;
+var mut test: string;
 if true {
   test = "yes";
 } else {

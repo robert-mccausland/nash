@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\n        var mut variable = \"test1\";\n        out(variable);\n        variable = \"test2\";\n        out(variable);\n        \"#,\n    \"\", |_| {})"
+---
+stdout: "test1\ntest2\n"
+stderr: ""
+error: ~
+exit_code: 0
