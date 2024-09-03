@@ -61,7 +61,7 @@ impl Evaluatable for ForLoopExpression {
 
         for item in array.as_ref().borrow().iter() {
             let result = self.loop_body.execute_with_initializer(
-                |stack| stack.declare_variable_init(&self.item_name.value, item.clone(), true),
+                |stack| stack.declare_variable_init(&self.item_name.value, item.clone(), false),
                 stack,
                 executor,
             );

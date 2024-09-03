@@ -212,7 +212,7 @@ impl Stack {
                         )
                         .into());
                     }
-                    stack.declare_variable_init(&name.value, value, true)?;
+                    stack.declare_variable_init(&name.value, value, false)?;
                 }
 
                 Ok(())

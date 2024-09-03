@@ -216,7 +216,7 @@ impl Evaluatable for PipelineExpression {
                 stack.declare_variable_init(
                     &capture_exit_code.value,
                     (command_output.exit_code as i32).into(),
-                    true,
+                    false,
                 )?;
             } else if command_output.exit_code != 0 {
                 return Err(format!(
@@ -230,7 +230,7 @@ impl Evaluatable for PipelineExpression {
                 stack.declare_variable_init(
                     &capture_stderr.value,
                     command_output.stderr.unwrap_or_default().into(),
-                    true,
+                    false,
                 )?;
             }
         }

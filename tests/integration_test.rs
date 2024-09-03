@@ -806,12 +806,54 @@ out((exit_code, stderr, exit_code_2, stderr_2).fmt());
     );
 
     nash_test!(
-        should_be_able_to_mutate_mutable_value,
+        for_loop_variable_should_be_non_immutable,
         r#"
-        var mut variable = "test1";
-        out(variable);
-        variable = "test2";
-        out(variable);
+        for index in [1] {
+            index = 69;
+        };
         "#
+    );
+
+    nash_test!(
+        function_arguments_should_be_immutable,
+        r#"
+        func function(value: string) {
+            value = "something else";
+        }
+
+        function("test");
+        "#
+    );
+
+    nash_test!(
+        captured_values_should_be_immutable,
+        r#"
+        exec `command`[cap stderr];
+        stderr = "whatever";
+        "#,
+        "",
+        |executor| {
+            executor
+                .expect_run_pipeline()
+                .with(predicate::eq::<Pipeline>(Pipeline::new(
+                    vec![CommandDefinition::new(
+                        "command".to_owned(),
+                        Vec::new(),
+                        true,
+                    )],
+                    None,
+                    None,
+                )))
+                .return_once(|_| {
+                    Ok(PipelineOutput {
+                        stdout: Some(String::new()),
+                        command_outputs: vec![CommandOutput::new(
+                            0,
+                            Some("test_stderr".to_owned()),
+                        )],
+                    })
+                })
+                .once();
+        }
     );
 }

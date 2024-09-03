@@ -1,0 +1,11 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\n        exec `command`[cap stderr];\n        stderr = \"whatever\";\n        \"#,\n    \"\",\n    |executor|\n        {\n            executor.expect_run_pipeline().with(predicate::eq::<Pipeline>(Pipeline::new(vec![CommandDefinition::new(\"command\".to_owned(),\n                                    Vec::new(), true,)], None,\n                                None))).return_once(|_|\n                        {\n                            Ok(PipelineOutput {\n                                    stdout: Some(String::new()),\n                                    command_outputs: vec![CommandOutput::new(0,\n                                        Some(\"test_stderr\".to_owned()),)],\n                                })\n                        }).once();\n        })"
+---
+stdout: ""
+stderr: ""
+error:
+  ExecutionError:
+    message: "Can't assign to a variable that is not mutable"
+    call_stack: []
+exit_code: 103
