@@ -7,6 +7,6 @@ exec `echo test string` => `grep test`;
 
 # Capture exit code, stderr still goes to console but we capture the exit code so returning
 # with a non zero exit code will not cause an error.
-var output = exec `cat nothing`[cap exit_code] => `echo`;
+var output = exec `cat nothing`|cap exit_code| => `echo`;
 out("output: ${output}");
 out("exit code: ${exit_code.fmt()}");

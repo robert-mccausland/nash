@@ -6,8 +6,8 @@ var input = "./examples/example-input.txt";
 var output = "./examples/example-output.txt";
 
 exec open(input)
-    => `cat nothing`[cap stderr as error_message, cap exit_code] 
-    => `echo anyhow`[cap exit_code as echo_exit_code]
+    => `cat nothing`|cap stderr as error_message, cap exit_code|
+    => `echo anyhow`|cap exit_code as echo_exit_code|
     => write(output);
 
 out("Capturing stuff");

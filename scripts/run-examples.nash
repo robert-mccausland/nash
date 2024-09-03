@@ -4,7 +4,7 @@
 var failures = mut [""];
 failures.pop();
 
-for script in glob("./examples/*.nash") {
+for script in glob("./examples/example-*.nash") {
   var mut input = "";
 
   # This script requires user input...
@@ -13,7 +13,7 @@ for script in glob("./examples/*.nash") {
   };
 
   out("Running script ${script}...");
-  var output = exec input => `cargo run "${script}"`[cap exit_code as code];
+  var output = exec input => `nash "${script}"`|cap exit_code as code|;
   out(output);
 
   if code != 0 {
