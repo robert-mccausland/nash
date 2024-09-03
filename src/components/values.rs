@@ -12,7 +12,7 @@ pub enum Value {
     Integer(i32),
     Boolean(bool),
     Command(String, Vec<String>),
-    Array(Rc<RefCell<Vec<Value>>>, Type),
+    Array(Rc<RefCell<Vec<Value>>>, Type, bool),
     Tuple(Vec<Value>),
     FileHandle(String, FileMode),
 }
@@ -32,7 +32,9 @@ impl Value {
             Value::Integer(_) => Type::Integer,
             Value::Boolean(_) => Type::Boolean,
             Value::Command(_, _) => Type::Command,
-            Value::Array(_, value_type) => Type::Array(value_type.clone().into()),
+            Value::Array(_, value_type, mutable) => {
+                Type::Array(value_type.clone().into(), *mutable)
+            }
             Value::Tuple(values) => {
                 Type::Tuple(values.iter().map(|x| x.get_type()).collect::<Vec<_>>())
             }
@@ -43,6 +45,7 @@ impl Value {
     pub fn new_array<I: IntoIterator<Item = T>, T: Into<Value>>(
         values: I,
         array_type: Type,
+        mutable: bool,
     ) -> Result<Value, ExecutionError> {
         let values = values
             .into_iter()
@@ -56,7 +59,11 @@ impl Value {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(Self::Array(Rc::new(RefCell::new(values)), array_type))
+        Ok(Self::Array(
+            Rc::new(RefCell::new(values)),
+            array_type,
+            mutable,
+        ))
     }
 }
 
@@ -78,7 +85,7 @@ impl Display for Value {
                     .map(|x| Value::String(x.to_owned()));
                 fmt_collection("`", " ", "`", combined, f)?
             }
-            Value::Array(data, _) => fmt_collection("[", ",", "]", data.borrow().iter(), f)?,
+            Value::Array(data, _, _) => fmt_collection("[", ",", "]", data.borrow().iter(), f)?,
             Value::Tuple(data) => fmt_collection("(", ",", ")", data.iter(), f)?,
             Value::FileHandle(path, mode) => {
                 match mode {
@@ -120,7 +127,7 @@ pub enum Type {
     Integer,
     Boolean,
     Command,
-    Array(Box<Type>),
+    Array(Box<Type>, bool),
     Tuple(Vec<Type>),
     FileHandle,
 }
@@ -133,7 +140,10 @@ impl Display for Type {
             Type::Integer => f.write_str("integer"),
             Type::Boolean => f.write_str("boolean"),
             Type::Command => f.write_str("command"),
-            Type::Array(array_type) => {
+            Type::Array(array_type, mutable) => {
+                if *mutable {
+                    f.write_str("mut ")?;
+                }
                 f.write_str("[")?;
                 array_type.fmt(f)?;
                 f.write_str("]")?;
@@ -143,5 +153,13 @@ impl Display for Type {
             Type::Tuple(item_types) => fmt_collection("(", ",", ")", item_types.iter(), f),
             Type::FileHandle => f.write_str("file_handle"),
         }
+    }
+}
+
+impl Type {
+    pub fn is_assignable_to(&self, other: &Type) -> bool {
+        // This method is dumb right now, but keeping it in to make it easier when we implement
+        // mutable types being able to be assigned to non-mutable values
+        self == other
     }
 }

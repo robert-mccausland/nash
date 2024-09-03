@@ -36,10 +36,10 @@ impl PipelineCommand {
         let expression = Expression::parse(tokens)?;
         let mut capture_stderr = None;
         let mut capture_exit_code = None;
-        if let Some(TokenValue::LeftSquare()) = tokens.peek_value() {
+        if let Some(TokenValue::Pipe()) = tokens.peek_value() {
             tokens.next();
             loop {
-                if let Some(TokenValue::RightSquare()) = tokens.peek_value() {
+                if let Some(TokenValue::Pipe()) = tokens.peek_value() {
                     tokens.next();
                     break;
                 }
@@ -58,10 +58,12 @@ impl PipelineCommand {
 
                 if let Some(TokenValue::Comma()) = tokens.peek_value() {
                     tokens.next();
-                } else if let Some(TokenValue::RightSquare()) = tokens.peek_value() {
+                } else if let Some(TokenValue::Pipe()) = tokens.peek_value() {
                     // Allow omitting trailing comma
                 } else {
-                    return Err("Expected , or as after item in command options".into());
+                    return Err(
+                        "Expected \"`\", \"as\" or \"|\" after item in command options".into(),
+                    );
                 }
             }
         }

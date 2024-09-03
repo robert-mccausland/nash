@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\n        var array = [[\"value00\"], [\"value10\", \"value11\"]];\n        out(array[1][0].fmt());\n        \"#,\n    \"\", |_| {})"
+---
+stdout: "\"value10\"\n"
+stderr: ""
+error: ~
+exit_code: 0

@@ -55,7 +55,7 @@ impl Evaluatable for ForLoopExpression {
         stack: &mut Stack,
         executor: &mut E,
     ) -> EvaluationResult<Value> {
-        let Value::Array(array, _) = self.array_expression.evaluate(stack, executor)? else {
+        let Value::Array(array, _, _) = self.array_expression.evaluate(stack, executor)? else {
             return Err("for ... in loop must be used on an array value".into());
         };
 

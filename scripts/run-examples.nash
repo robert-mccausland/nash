@@ -1,7 +1,7 @@
 #!/bin/nash
 
 # Disgusting hack because you can't declare empty arrays at the moment
-var failures = [""];
+var failures = mut [""];
 failures.pop();
 
 for script in glob("./examples/*.nash") {
@@ -13,7 +13,7 @@ for script in glob("./examples/*.nash") {
   };
 
   out("Running script ${script}...");
-  var output = exec input => `nash "${script}"`[cap exit_code as code];
+  var output = exec input => `cargo run "${script}"`[cap exit_code as code];
   out(output);
 
   if code != 0 {

@@ -1,0 +1,55 @@
+#!/bin/nash
+
+# Mutable types - for arrays to be mutated they must be declared as a mutable type.
+# Note that a mutable variable and mutable type are different things.
+
+# Currently only arrays can be mutable, as every other type is passed by value so
+# is always immutable.
+
+# Some instance methods can be called on the immutable type (e.g. fmt()) and some can't
+# as they edit the underlying data (e.g. pop()).
+
+# A mutable array on an immutable variable can be mutated directly, 
+# but the variable can not be assigned to a different array.
+var array = mut [1, 2, 3];
+array.push(4); # okay
+array = [1, 2, 3, 4] # error
+
+# An immutable array on a mutable variable cannot be mutated directly, 
+# but the variable can be assigned to a different array.
+var mut array = [1, 2, 3];
+array.push(4); # error
+array.fmt(); # okay - fmt can be called on immutable type
+array = [1, 2, 3, 4] # okay
+
+# An array can be both mutable and on a mutable variable.
+var mut array = mut [1, 2, 3];
+array.push(4); # okay
+array = [1, 2, 3, 4] # okay
+
+# A mutable type can be assigned to a variable of immutable type.
+var mutable = mut [1, 2, 3];
+var immutable = mutable; # okay
+
+# However the immutable variable will not be able to mutate the array.
+immutable.push(5); # error
+mutable.push(5); # okay
+
+# This is useful because for example in functions, its nice to know if it will mutate the type
+func mutate(value: mut string[]) {
+    value.push("hi");
+}
+
+var array = mut ["data"];
+mutate(array);
+out(array.fmt()); # ["data", "hi"]
+
+# Its also good to assure the user that you are not going to edit their data
+func just_looking(values: string[]) {
+    for value in value {
+        out("Found: ${value}");
+    }
+}
+
+var array = ["data"];
+just_looking(array);

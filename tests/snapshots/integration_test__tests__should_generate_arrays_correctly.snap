@@ -1,6 +1,6 @@
 ---
 source: tests/integration_test.rs
-expression: "run_code(r#\"\nvar array = [0];\narray.push(1);\narray.push(2);\narray.push(3);\nout(array.fmt());\n\"#)"
+expression: "run_code(r#\"\nvar array = mut [0];\narray.push(1);\narray.push(2);\narray.push(3);\nout(array.fmt());\n\"#,\n    \"\", |_| {})"
 ---
 stdout: "[0,1,2,3]\n"
 stderr: ""

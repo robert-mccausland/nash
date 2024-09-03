@@ -1,0 +1,12 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\n    var array = [1,2,3];\n    array.push(4);\n    \"#, \"\", |_| {})"
+---
+stdout: ""
+stderr: ""
+error:
+  ExecutionError:
+    message: "No function found with name: push on type [integer] that accepts arguments integer"
+    call_stack:
+      - push
+exit_code: 103

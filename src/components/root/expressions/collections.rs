@@ -2,6 +2,7 @@ use serde::Serialize;
 
 use crate::{
     components::{stack::Stack, values::Value, Evaluatable, EvaluationResult, Parsable, Tokens},
+    constants::MUT,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
     Executor, ParserError,
@@ -14,14 +15,22 @@ macro_rules! collection_expression_impl {
         #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
         pub struct $expression_type {
             values: Vec<Expression>,
+            mutable: bool,
         }
 
         impl $expression_type {
             fn try_parse_impl<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
                 tokens: &mut crate::utils::iterators::Backtrackable<I>,
             ) -> Result<Option<Self>, crate::errors::ParserError> {
+                let mutable = if let Some(TokenValue::Keyword(MUT)) = tokens.peek_value() {
+                    tokens.next();
+                    true
+                } else {
+                    false
+                };
+
                 if let Some(values) = try_parse_collection(tokens, &$start_token, &$end_token)? {
-                    Ok(Some($expression_type { values }))
+                    Ok(Some($expression_type { values, mutable }))
                 } else {
                     Ok(None)
                 }
@@ -62,8 +71,7 @@ fn try_parse_collection<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
 fn evaluate_collection<E: Executor>(
     values: &Vec<Expression>,
     stack: &mut Stack,
-    executor: &mut E
-,
+    executor: &mut E,
 ) -> EvaluationResult<Vec<Value>> {
     let mut evaluated_values = Vec::new();
     for value in values {
@@ -82,13 +90,26 @@ impl Parsable for TupleExpression {
     fn try_parse<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
         tokens: &mut crate::utils::iterators::Backtrackable<I>,
     ) -> Result<Option<Self>, crate::errors::ParserError> {
-        TupleExpression::try_parse_impl(tokens)
+        let Some(result) = TupleExpression::try_parse_impl(tokens)? else {
+            return Ok(None);
+        };
+
+        // Kinda hacky because I didn't wanna refactor this code too much, and (spoiler alert) tuples
+        // are probably going to get ditched before too long anyway.
+        if result.mutable {
+            return Err("Tuples can not be declared as mutable".into());
+        }
+
+        return Ok(Some(result));
     }
 }
 
 impl Evaluatable for TupleExpression {
-    fn evaluate<E: Executor>(&self, stack: &mut Stack, executor: &mut E
-) -> EvaluationResult<Value> {
+    fn evaluate<E: Executor>(
+        &self,
+        stack: &mut Stack,
+        executor: &mut E,
+    ) -> EvaluationResult<Value> {
         Ok(Value::Tuple(evaluate_collection(&self.values, stack, executor)?).into())
     }
 }
@@ -108,8 +129,11 @@ impl Parsable for ArrayExpression {
 }
 
 impl Evaluatable for ArrayExpression {
-    fn evaluate<E: Executor>(&self, stack: &mut Stack, executor: &mut E
-) -> EvaluationResult<Value> {
+    fn evaluate<E: Executor>(
+        &self,
+        stack: &mut Stack,
+        executor: &mut E,
+    ) -> EvaluationResult<Value> {
         let values = evaluate_collection(&self.values, stack, executor)?;
         let mut array_types = values.iter().map(|x| x.get_type());
         let Some(array_type) = array_types.next() else {
@@ -121,6 +145,6 @@ impl Evaluatable for ArrayExpression {
             }
         }
 
-        return Ok(Value::new_array(values, array_type)?.into());
+        return Ok(Value::new_array(values, array_type, self.mutable)?.into());
     }
 }

@@ -9,3 +9,4 @@
 9. Objects instead of tuples maybe?
 10. Optional types?
 11. Support piping stderr of a command
+12. Allow assigning mutable values to non-mutable types 

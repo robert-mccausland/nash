@@ -1,0 +1,84 @@
+#!/bin/nash
+
+# Experimental object syntax
+
+# Create an object
+var object = {
+    foo: "bar"
+};
+
+object.foo = "baz" # error
+
+# Create a mutable object
+var object = mut {
+    foo: "bar"
+};
+
+object.foo = "baz" # okay
+
+# Cascading mutability - one might thing you would need to do this to create a nested mutable object
+var object = mut {
+    foo: mut {
+        bar: "baz"
+    }
+};
+object.foo.bar = "bingo" # okay
+
+# This is just a little but annoying to type out - like sure it makes sense but I would like the type
+# mutability rules to be as "invisible" as possible, just poking out when they are relevant.
+# So because of this I would suggest that mutability in objects cascades:
+
+var object = mut {
+    foo: {
+        bar: "baz"
+    }
+}
+object.foo.bar = "bingo" # still okay
+
+# If you really wanted an immutable object nested in an mutable object then you can do this
+var object = mut {
+    far: "boo",
+    foo: !mut {
+        bar: "baz"
+    }
+}
+
+object.far = "frag" # okay
+object.foo.baz = "bah"  # error
+object.foo = "boop" # okay (maybe surprisingly)
+
+# You can still edit the field however as its on a mutable object, specifying field level rules also works:
+var object = mut {
+    far: "boo",
+    !mut foo: {
+        bar: "baz"
+    }
+}
+
+object.foo.bar = "bah" # not okay
+object.foo = "boop" # not okay
+
+# This all works the other way round too:
+var object = {
+    far: "boo", 
+    mut foo: {
+        bar: "baz"
+    }
+}
+
+object.far = "frag" # not okay
+object.foo.bar = "bah" # okay
+object.foo = "boop" # okay
+
+# Basically every field on an object is either mutable or not mutable, but we can put the specifier at a
+# higher level of the object and it will cascade down the object.
+
+# An object is assignable to another object type if it has a superset of that objects fields, with the same or better mutability.
+# In other words you need to contain every field of the type, if the type contains mutable fields you must also have those fields as mutable,
+# if the type contains immutable fields you can have mutable or immutable versions of those fields.
+
+# Probably need a lot more details around the whole assignable to situation as mutability and objects make this a lot more important.
+
+# Another things to pay attention to is do we allow up casting? I'm going to say yes put stick it on the backlog,
+# and for now trying to upcast is an error even if the underlying type is okay with it. But we will keep the underlying types so things like
+# fmt() will be able to see all the fields on a value, not just the fields that are available on the particular type it is assigned to.

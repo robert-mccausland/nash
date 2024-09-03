@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\n        var mut value: mut [[string]];\n        value = mut [[\"test1\"]];\n        value.push([\"test2\"]);\n        out(value.fmt());\n        \"#,\n    \"\", |_| {})"
+---
+stdout: "[[\"test1\"],[\"test2\"]]\n"
+stderr: ""
+error: ~
+exit_code: 0

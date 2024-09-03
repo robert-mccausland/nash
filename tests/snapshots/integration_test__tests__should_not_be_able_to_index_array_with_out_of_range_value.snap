@@ -1,0 +1,11 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\n        out([\"value\"][1]);\n        \"#, \"\", |_| {})"
+---
+stdout: ""
+stderr: ""
+error:
+  ExecutionError:
+    message: "Index value must be less than array length, array has length 1 and got index 1."
+    call_stack: []
+exit_code: 103

@@ -1,0 +1,13 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\n        var value: mut string;\n        \"#, \"\", |_| {})"
+---
+stdout: ""
+stderr: ""
+error:
+  ParserError:
+    message: Only array types can be mutable
+    token: "Identifier(\"string\")"
+    start: 24
+    end: 30
+exit_code: 102

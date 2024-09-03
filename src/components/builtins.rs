@@ -38,7 +38,7 @@ pub fn call_builtin_instance<E: Executor>(
 ) -> Result<Value, ExecutionError> {
     match (name, instance, args) {
         ("fmt", instance, []) => fmt(executor, instance),
-        ("push", Value::Array(instance, array_type), [value]) => {
+        ("push", Value::Array(instance, array_type, true), [value]) => {
             if array_type != &value.get_type() {
                 return Err(format!(
                     "Can not push a value of type {} to an array with type {}",
@@ -49,8 +49,8 @@ pub fn call_builtin_instance<E: Executor>(
             }
             push(executor, instance.as_ref(), value)
         }
-        ("pop", Value::Array(instance, _), []) => pop(executor, instance.as_ref()),
-        ("len", Value::Array(instance, _), []) => array_len(executor, instance.as_ref()),
+        ("pop", Value::Array(instance, _, true), []) => pop(executor, instance.as_ref()),
+        ("len", Value::Array(instance, _, _), []) => array_len(executor, instance.as_ref()),
         ("len", Value::String(instance), []) => string_len(executor, instance),
         ("ends_with", Value::String(instance), [Value::String(value)]) => {
             ends_with(executor, instance, value)
@@ -206,5 +206,5 @@ fn glob<E: Executor>(_context: &mut E, pattern: &str) -> Result<Value, Execution
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    return Ok(Value::new_array(paths, Type::String)?);
+    return Ok(Value::new_array(paths, Type::String, false)?);
 }

@@ -2,6 +2,7 @@ use serde::Serialize;
 
 use crate::{
     components::values::Type,
+    constants::MUT,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
     ParserError,
@@ -24,29 +25,46 @@ impl TypeDefinition {
     fn parse_impl<'a, I: Iterator<Item = &'a Token<'a>>>(
         tokens: &mut Backtrackable<I>,
     ) -> Result<Type, ParserError> {
+        let mutable = if let Some(TokenValue::Keyword(MUT)) = tokens.peek_value() {
+            tokens.next();
+            true
+        } else {
+            false
+        };
+
+        if let Some(TokenValue::LeftSquare()) = tokens.peek_value() {
+            tokens.next();
+            let inner_type = Self::parse_impl(tokens)?;
+            let Some(TokenValue::RightSquare()) = tokens.peek_value() else {
+                return Err("Expected ] after inner type in array type definition".into());
+            };
+            tokens.next();
+            return Ok(Type::Array(inner_type.into(), mutable));
+        }
+
+        if mutable {
+            return Err("Only array types can be mutable".into());
+        }
+
+        return Ok(Self::parse_base_type(tokens)?);
+    }
+
+    fn parse_base_type<'a, I: Iterator<Item = &'a Token<'a>>>(
+        tokens: &mut Backtrackable<I>,
+    ) -> Result<Type, ParserError> {
         let next = tokens.peek_value();
+
         if let Some(TokenValue::Identifier(type_name)) = next {
             tokens.next();
 
-            let base_type = match *type_name {
+            return Ok(match *type_name {
                 "void" => Type::Void,
                 "string" => Type::String,
                 "integer" => Type::Integer,
                 "boolean" => Type::Boolean,
                 "command" => Type::Command,
                 _ => return Err(format!("{type_name} is not a valid type name").into()),
-            };
-
-            if let Some(TokenValue::LeftSquare()) = tokens.peek_value() {
-                tokens.next();
-                let Some(TokenValue::RightSquare()) = tokens.peek_value() else {
-                    return Err("Expected ] after [ in array type definition".into());
-                };
-                tokens.next();
-                return Ok(Type::Array(base_type.into()));
-            } else {
-                return Ok(base_type);
-            }
+            });
         }
 
         if let Some(TokenValue::LeftBracket()) = next {

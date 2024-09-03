@@ -209,7 +209,7 @@ var variable;
     nash_test!(
         should_generate_arrays_correctly,
         r#"
-var array = [0];
+var array = mut [0];
 array.push(1);
 array.push(2);
 array.push(3);
@@ -562,7 +562,7 @@ out(code.fmt());
     nash_test!(
         should_be_able_to_capture_non_zero_exit_code_of_command,
         r#"
-exec `my_command`[cap exit_code as code];
+exec `my_command`|cap exit_code as code|;
 out(code.fmt());
 "#,
         "",
@@ -578,7 +578,7 @@ out(code.fmt());
     nash_test!(
         should_be_able_to_capture_stderr_from_command,
         r#"
-exec `my_command`[cap stderr as stderr];
+exec `my_command`|cap stderr as stderr|;
 out(stderr.fmt());
 "#,
         "",
@@ -739,13 +739,13 @@ exec "append me!" => append("file_path");
     nash_test!(
         should_be_able_to_capture_data_from_commands,
         r#"
-exec `command1`[
+exec `command1`|
     cap exit_code, 
     cap stderr
-] => `command2`[
+| => `command2`|
     cap exit_code as exit_code_2, 
     cap stderr as stderr_2
-];
+|;
 
 out((exit_code, stderr, exit_code_2, stderr_2).fmt());
 "#,
@@ -828,7 +828,7 @@ out((exit_code, stderr, exit_code_2, stderr_2).fmt());
     nash_test!(
         captured_values_should_be_immutable,
         r#"
-        exec `command`[cap stderr];
+        exec `command`|cap stderr|;
         stderr = "whatever";
         "#,
         "",
@@ -855,5 +855,105 @@ out((exit_code, stderr, exit_code_2, stderr_2).fmt());
                 })
                 .once();
         }
+    );
+
+    nash_test!(
+        should_not_be_able_to_mutate_immutable_array,
+        r#"
+    var array = [1,2,3];
+    array.push(4);
+    "#
+    );
+
+    nash_test!(
+        should_be_able_to_call_const_instance_methods_on_immutable_array,
+        r#"
+        var array = [1,2,3];
+        out(array.fmt());
+        "#
+    );
+
+    // This will probably change in the future, but for now there was some implementation challenges that I want to leave alone for a bit
+    nash_test!(
+        should_not_be_able_to_assign_mutable_array_to_immutable_array,
+        r#"
+        var mut array: [integer];
+        array = mut [1,2,3];
+        "#
+    );
+
+    nash_test!(
+        should_not_be_able_to_assign_immutable_array_to_mutable_array,
+        r#"
+        var mut array: mut [integer];
+        array = [1,2,3];
+        "#
+    );
+
+    nash_test!(
+        should_not_allow_mutable_types_that_are_not_arrays,
+        r#"
+        var value: mut string;
+        "#
+    );
+
+    nash_test!(
+        should_parse_nested_array_type,
+        r#"
+        var mut value: mut [[string]];
+        value = mut [["test1"]];
+        value.push(["test2"]);
+        out(value.fmt());
+        "#
+    );
+
+    nash_test!(
+        should_be_able_to_index_array,
+        r#"
+        out(["value"][0]);
+        "#
+    );
+
+    nash_test!(
+        should_not_be_able_to_index_array_with_out_of_range_value,
+        r#"
+        out(["value"][1]);
+        "#
+    );
+
+    nash_test!(
+        should_not_be_able_to_chain_accessor_and_indexes,
+        r#"
+        var array = [["value00"], ["value10", "value11"]];
+        out(array[1][0].fmt());
+        "#
+    );
+
+    nash_test!(
+        should_not_be_able_to_use_expression_in_indexes,
+        r#"
+        var array = [0, 1, 2, 3, 4, 5];
+        out(array[1 + 2].fmt());
+        "#
+    );
+
+    nash_test!(
+        should_error_when_non_integer_value_used_in_index,
+        r#"
+        var array = [0, 1, 2, 3, 4, 5];
+        array["string"];
+        "#
+    );
+
+    nash_test!(
+        should_be_able_to_mutate_nested_arrays,
+        r#"
+        var array = [mut [0], mut [0], mut [0], mut [0]];
+        for nested in array {
+            nested.push(1);
+            nested.push(2);
+        };
+        out(array.fmt());
+        "#
     );
 }

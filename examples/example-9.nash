@@ -1,7 +1,7 @@
 #!/bin/nash
 
 # Array example
-var array = ["first", "second", "third"];
+var array = mut ["first", "second", "third"];
 out(array.pop());
 out(array.fmt());
 

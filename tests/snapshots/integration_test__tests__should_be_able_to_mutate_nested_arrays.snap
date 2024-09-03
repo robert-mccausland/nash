@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\n        var array = [mut [0], mut [0], mut [0], mut [0]];\n        for nested in array {\n            nested.push(1);\n            nested.push(2);\n        };\n        out(array.fmt());\n        \"#,\n    \"\", |_| {})"
+---
+stdout: "[[0,1,2],[0,1,2],[0,1,2],[0,1,2]]\n"
+stderr: ""
+error: ~
+exit_code: 0

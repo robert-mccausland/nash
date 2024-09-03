@@ -10,7 +10,7 @@ use super::Expression;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BracketExpression {
-    inner: Expression,
+    inner: Box<Expression>,
 }
 
 impl Parsable for BracketExpression {
@@ -33,7 +33,9 @@ impl Parsable for BracketExpression {
         };
         tokens.next();
 
-        return Ok(Some(Self { inner }));
+        return Ok(Some(Self {
+            inner: Box::new(inner),
+        }));
     }
 }
 
@@ -41,8 +43,7 @@ impl Evaluatable for BracketExpression {
     fn evaluate<E: Executor>(
         &self,
         stack: &mut Stack,
-        executor: &mut E
-,
+        executor: &mut E,
     ) -> crate::components::EvaluationResult<Value> {
         self.inner.evaluate(stack, executor)
     }

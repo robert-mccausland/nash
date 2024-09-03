@@ -1,0 +1,11 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\n        var mut array: [integer];\n        array = mut [1,2,3];\n        \"#,\n    \"\", |_| {})"
+---
+stdout: ""
+stderr: ""
+error:
+  ExecutionError:
+    message: "Can not assign a value of type mut [integer] to a variable of type [integer]"
+    call_stack: []
+exit_code: 103

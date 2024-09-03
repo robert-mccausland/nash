@@ -110,9 +110,9 @@ impl Stack {
     fn set_variable(variable: &mut Variable, value: Value) -> Result<(), ExecutionError> {
         let variable_type = &variable.value_type;
         let value_type = value.get_type();
-        if *variable_type != value_type {
+        if !variable_type.is_assignable_to(&value_type) {
             return Err(format!(
-                "Can not assign a value of type {variable_type} to a variable of type {value_type}"
+                "Can not assign a value of type {value_type} to a variable of type {variable_type}"
             )
             .into());
         }
