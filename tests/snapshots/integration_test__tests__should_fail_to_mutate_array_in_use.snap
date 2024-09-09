@@ -5,8 +5,6 @@ expression: "run_code(r#\"\n# Array example\nvar array = [\"first\", \"second\",
 stdout: ""
 stderr: ""
 error:
-  ExecutionError:
-    message: "No function found with name: pop on type [string] that accepts arguments "
-    call_stack:
-      - pop
+  PostProcessError:
+    message: Instance function not found
 exit_code: 103

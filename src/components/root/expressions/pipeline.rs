@@ -4,18 +4,18 @@ use crate::{
     components::{
         root::identifier::Identifier,
         stack::Stack,
-        values::{FileMode, Value},
-        Evaluatable, EvaluationResult, Parsable, Tokens,
+        values::{FileMode, Type, Value},
+        EvaluationResult, PostProcessContext, Tokens,
     },
     constants::{AS, CAP, EXEC},
-    errors::ExecutionError,
+    errors::{ExecutionError, PostProcessError},
     executor::Executor,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
     CommandDefinition, ParserError, Pipeline, PipelineDestination, PipelineSource,
 };
 
-use super::Expression;
+use super::{Expression, ExpressionComponent};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct PipelineCommand {
@@ -102,7 +102,7 @@ impl PipelineCommand {
     }
 }
 
-impl Parsable for PipelineExpression {
+impl ExpressionComponent for PipelineExpression {
     fn try_parse<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
         tokens: &mut crate::utils::iterators::Backtrackable<I>,
     ) -> Result<Option<Self>, crate::errors::ParserError> {
@@ -130,9 +130,34 @@ impl Parsable for PipelineExpression {
 
         return Ok(Some(Self { commands }));
     }
-}
 
-impl Evaluatable for PipelineExpression {
+    fn get_type(&self, context: &mut PostProcessContext) -> Result<Type, PostProcessError> {
+        // This is a little bit and we could do a better job here, but that would probably require introducing some new types...
+
+        for command in &self.commands {
+            if !matches!(
+                command.expression.get_type(context)?,
+                Type::Command | Type::FileHandle | Type::String
+            ) {
+                return Err(
+                    "Value provided to pipeline commands must be a FileHandle or Command".into(),
+                );
+            }
+        }
+
+        // Declare variables after command expressions have been ran
+        for command in &self.commands {
+            if let Some(capture_exit_code) = &command.capture_exit_code {
+                context.declare_variable(capture_exit_code.value.clone(), Type::Integer);
+            }
+            if let Some(capture_stderr) = &command.capture_stderr {
+                context.declare_variable(capture_stderr.value.clone(), Type::String);
+            }
+        }
+
+        return Ok(Type::String);
+    }
+
     fn evaluate<E: Executor>(
         &self,
         stack: &mut Stack,

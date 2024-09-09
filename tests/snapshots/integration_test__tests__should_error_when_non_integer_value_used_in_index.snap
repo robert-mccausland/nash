@@ -5,7 +5,6 @@ expression: "run_code(r#\"\n        var array = [0, 1, 2, 3, 4, 5];\n        arr
 stdout: ""
 stderr: ""
 error:
-  ExecutionError:
+  PostProcessError:
     message: Index expression must evaluate to integer
-    call_stack: []
 exit_code: 103

@@ -37,7 +37,7 @@ pub fn execute<R: Read, E: Executor>(
             return err;
         })?;
 
-    let mut component_tree = components::parse(tokens.iter()).map_err(|err| {
+    let component_tree = components::parse(tokens.iter()).map_err(|err| {
         eprintln!("Error parsing script:");
         eprintln!(
             "{}",
@@ -45,6 +45,8 @@ pub fn execute<R: Read, E: Executor>(
         );
         return err;
     })?;
+
+    component_tree.post_process()?;
 
     let result = component_tree.execute(executor).map_err(|err| {
         eprintln!("Error executing script: {err}");

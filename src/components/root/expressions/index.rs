@@ -1,13 +1,18 @@
 use serde::Serialize;
 
 use crate::{
-    components::{stack::Stack, values::Value, EvaluationResult, Tokens},
+    components::{
+        stack::Stack,
+        values::{Type, Value},
+        EvaluationResult, PostProcessContext, Tokens,
+    },
+    errors::PostProcessError,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
     Executor, ParserError,
 };
 
-use super::{BaseExpression, Expression};
+use super::{BaseExpression, DependentExpressionComponent, Expression};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct IndexExpression {
@@ -15,8 +20,8 @@ pub struct IndexExpression {
     index: Box<Expression>,
 }
 
-impl IndexExpression {
-    pub fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
+impl DependentExpressionComponent for IndexExpression {
+    fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
         inner: BaseExpression,
         tokens: &mut Backtrackable<I>,
     ) -> Result<Result<Self, BaseExpression>, ParserError> {
@@ -37,7 +42,7 @@ impl IndexExpression {
         }));
     }
 
-    pub fn evaluate<E: Executor>(
+    fn evaluate<E: Executor>(
         &self,
         stack: &mut Stack,
         executor: &mut E,
@@ -62,5 +67,17 @@ impl IndexExpression {
         ))?;
 
         return Ok(result.clone());
+    }
+
+    fn get_type(&self, context: &mut PostProcessContext) -> Result<Type, PostProcessError> {
+        let Type::Array(inner_type, _) = self.inner.get_type(context)? else {
+            return Err("Expression must evaluate to an array".into());
+        };
+
+        let Type::Integer = self.index.get_type(context)? else {
+            return Err("Index expression must evaluate to integer".into());
+        };
+
+        return Ok(*inner_type);
     }
 }

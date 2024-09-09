@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\n        func glob(value: string) {\n            out(\"defined glob called!\");\n        }\n        glob(\"\");\n        \"#,\n    \"\", |_| {})"
+---
+stdout: "defined glob called!\n"
+stderr: ""
+error: ~
+exit_code: 0

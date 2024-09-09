@@ -3,9 +3,13 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
     components::{
-        errors::ParserError, root::expressions::Expression, stack::Stack, values::Value,
-        Evaluatable, EvaluationResult, Parsable, Tokens,
+        errors::ParserError,
+        root::expressions::{Expression, ExpressionComponent},
+        stack::Stack,
+        values::{Type, Value},
+        EvaluationResult, PostProcessContext, Tokens,
     },
+    errors::PostProcessError,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
     Executor,
@@ -55,8 +59,7 @@ impl StringLiteral {
     pub fn resolve<E: Executor>(
         &self,
         stack: &mut Stack,
-        executor: &mut E
-,
+        executor: &mut E,
     ) -> EvaluationResult<String> {
         let mut result = String::new();
         for (prefix, expression) in &self.parts {
@@ -83,7 +86,7 @@ impl From<&str> for StringLiteral {
     }
 }
 
-impl Parsable for StringLiteral {
+impl ExpressionComponent for StringLiteral {
     fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
         tokens: &mut Backtrackable<I>,
     ) -> Result<Option<Self>, ParserError> {
@@ -96,12 +99,16 @@ impl Parsable for StringLiteral {
             },
         )
     }
-}
-
-impl Evaluatable for StringLiteral {
-    fn evaluate<E: Executor>(&self, stack: &mut Stack, executor: &mut E
-) -> EvaluationResult<Value> {
+    fn evaluate<E: Executor>(
+        &self,
+        stack: &mut Stack,
+        executor: &mut E,
+    ) -> EvaluationResult<Value> {
         Ok(Value::String(self.resolve(stack, executor)?).into())
+    }
+
+    fn get_type(&self, _context: &mut PostProcessContext) -> Result<Type, PostProcessError> {
+        return Ok(Type::String);
     }
 }
 

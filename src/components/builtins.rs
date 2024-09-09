@@ -1,7 +1,37 @@
+use super::values::{FileMode, Type, Value};
 use crate::{errors::ExecutionError, Executor};
 use std::{cell::RefCell, io::BufRead, io::Write};
 
-use super::values::{FileMode, Type, Value};
+pub fn get_builtin_type(name: &str, args: &[Type]) -> Option<Type> {
+    Some(match (name, args) {
+        ("parse_int", [Type::String]) => Type::Integer,
+        ("read", []) => Type::FileHandle,
+        ("open", [Type::String]) => Type::FileHandle,
+        ("write", [Type::String]) => Type::FileHandle,
+        ("append", [Type::String]) => Type::FileHandle,
+        ("err", [Type::String]) => Type::Void,
+        ("out", [Type::String]) => Type::Void,
+        ("glob", [Type::String]) => Type::Array(Box::new(Type::String), false),
+        _ => return None,
+    })
+}
+
+pub fn get_builtin_instance_type(name: &str, instance: Type, args: &[Type]) -> Option<Type> {
+    Some(match (name, instance, args) {
+        ("fmt", _, []) => Type::String,
+        ("push", Type::Array(inner_type, true), [value]) => {
+            if *value != *inner_type {
+                return None;
+            };
+            Type::Void
+        }
+        ("pop", Type::Array(inner_type, true), []) => *inner_type,
+        ("len", Type::Array(_, _), []) => Type::Integer,
+        ("len", Type::String, []) => Type::Integer,
+        ("ends_with", Type::String, [Type::String]) => Type::Boolean,
+        _ => return None,
+    })
+}
 
 pub fn call_builtin<E: Executor>(
     name: &str,
@@ -9,7 +39,7 @@ pub fn call_builtin<E: Executor>(
     executor: &mut E,
 ) -> Result<Value, ExecutionError> {
     match (name, args) {
-        ("parse_int", [Value::String(arg1)]) => Ok(Value::Integer(parse_int(arg1)?)),
+        ("parse_int", [Value::String(arg1)]) => Ok(parse_int(executor, arg1)?),
         ("read", []) => read(executor),
         ("open", [Value::String(arg1)]) => open(executor, arg1),
         ("write", [Value::String(arg1)]) => write(executor, arg1),
@@ -69,9 +99,12 @@ pub fn call_builtin_instance<E: Executor>(
     }
 }
 
-fn parse_int(value: &str) -> Result<i32, ExecutionError> {
-    i32::from_str_radix(value, 10)
-        .map_err(|_| format!("Could not parse string {:} into integer", value).into())
+fn parse_int<E: Executor>(_executor: &mut E, value: &str) -> Result<Value, ExecutionError> {
+    Ok(i32::from_str_radix(value, 10)
+        .map_err::<ExecutionError, _>(|_| {
+            format!("Could not parse string {:} into integer", value).into()
+        })?
+        .into())
 }
 
 fn read<E: Executor>(executor: &mut E) -> Result<Value, ExecutionError> {

@@ -1,12 +1,10 @@
 ---
 source: tests/integration_test.rs
-expression: "run_code(r#\"\nfunc main() {\n  continue;\n}\n\nmain();\n\"#)"
+expression: "run_code(r#\"\nfunc main() {\n  continue;\n}\n\nmain();\n\"#, \"\", |_| {})"
 ---
 stdout: ""
 stderr: ""
 error:
-  ExecutionError:
-    message: Continue must be used in a loop block
-    call_stack:
-      - main
+  PostProcessError:
+    message: Continue statement can only be used from inside a looped block
 exit_code: 103

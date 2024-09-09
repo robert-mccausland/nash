@@ -1,11 +1,10 @@
 ---
 source: tests/integration_test.rs
-expression: "run_code(r#\"\nvar variable = [\"test\", 123];\n\"#)"
+expression: "run_code(r#\"\nvar variable = [\"test\", 123];\n\"#, \"\", |_| {})"
 ---
 stdout: ""
 stderr: ""
 error:
-  ExecutionError:
-    message: Array must have all values of the same type
-    call_stack: []
+  PostProcessError:
+    message: Expected all values of an array to be the same type
 exit_code: 103

@@ -1,12 +1,10 @@
 ---
 source: tests/integration_test.rs
-expression: "run_code(r#\"\nfunc test(arg: string) {}\ntest(123);\n\"#)"
+expression: "run_code(r#\"\nfunc test(arg: string) {}\ntest(123);\n\"#, \"\", |_| {})"
 ---
 stdout: ""
 stderr: ""
 error:
-  ExecutionError:
-    message: Argument arg has type string but got value with type integer
-    call_stack:
-      - test
+  PostProcessError:
+    message: Arguments are not correct
 exit_code: 103

@@ -1,12 +1,10 @@
 ---
 source: tests/integration_test.rs
-expression: "run_code(r#\"\nvar test = \"hi\";\nfunc my_function() {\n  out(test);\n}\nmy_function();\n\"#)"
+expression: "run_code(r#\"\nvar test = \"hi\";\nfunc my_function() {\n  out(test);\n}\nmy_function();\n\"#,\n    \"\", |_| {})"
 ---
 stdout: ""
 stderr: ""
 error:
-  ExecutionError:
-    message: "Couldn't find variable with name: test."
-    call_stack:
-      - my_function
+  PostProcessError:
+    message: "Variable 'test' has not been declared"
 exit_code: 103

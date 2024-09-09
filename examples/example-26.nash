@@ -37,7 +37,7 @@ var array = mut ["data"];
 mutate(array);
 out(array.fmt());
 
-# Its also good to assure the user that you are not going to edit their data
+# Its also good to assure your consumers that you are not going to edit their data
 func just_looking(values: [string]) {
     for value in values {
         out("Found: ${value}");

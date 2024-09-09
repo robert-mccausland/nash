@@ -956,4 +956,60 @@ out((exit_code, stderr, exit_code_2, stderr_2).fmt());
         out(array.fmt());
         "#
     );
+
+    nash_test!(
+        should_error_when_accessing_unknown_function,
+        r#"
+        var value = "test";
+        value.do_the_hokey_pokey();
+        "#
+    );
+
+    nash_test!(
+        should_error_when_invalid_function_called,
+        r#"
+        blarg();
+        "#
+    );
+
+    nash_test!(
+        should_error_when_builtin_function_arguments_are_the_incorrect_type,
+        r#"
+        glob(123);
+        "#
+    );
+
+    nash_test!(
+        should_use_defined_function_over_builtin,
+        r#"
+        func glob(value: string) {
+            out("defined glob called!");
+        }
+        glob("");
+        "#
+    );
+
+    nash_test!(
+        should_error_when_defined_function_arguments_are_the_incorrect_type,
+        r#"
+        func test(str: string, num: integer, bool: boolean) {}
+        test(123, "test", false);
+        "#
+    );
+
+    nash_test!(
+        should_error_if_operator_expression_is_invalid,
+        r#"
+        1 + "test";
+        "#
+    );
+
+    nash_test!(
+        should_error_if_function_returns_wrong_type,
+        r#"
+        func test(): string {
+            return 123;
+        }
+        "#
+    );
 }

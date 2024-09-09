@@ -127,8 +127,8 @@ pub enum Type {
     Integer,
     Boolean,
     Command,
-    Array(Box<Type>, bool),
-    Tuple(Vec<Type>),
+    Array(Box<Self>, bool),
+    Tuple(Vec<Self>),
     FileHandle,
 }
 

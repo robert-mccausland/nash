@@ -1,5 +1,10 @@
 use crate::{
-    components::{stack::Stack, values::Value, EvaluationResult},
+    components::{
+        stack::Stack,
+        values::{Type, Value},
+        EvaluationResult, PostProcessContext,
+    },
+    errors::PostProcessError,
     lexer::Token,
     utils::iterators::Backtrackable,
     Executor, ParserError,
@@ -11,15 +16,12 @@ mod brackets;
 mod branch;
 mod collections;
 mod index;
+mod literals;
 mod loops;
 mod pipeline;
 mod variable;
 
-use super::{
-    block::Block,
-    literals::{BooleanLiteral, CommandLiteral, IntegerLiteral, StringLiteral},
-    operator::Operator,
-};
+use super::{block::Block, operator::Operator};
 
 use accessor::AccessorExpression;
 use block::BlockExpression;
@@ -27,6 +29,7 @@ use brackets::BracketExpression;
 use branch::BranchExpression;
 use collections::{ArrayExpression, TupleExpression};
 use index::IndexExpression;
+use literals::{BooleanLiteral, CommandLiteral, IntegerLiteral, StringLiteral};
 use loops::{ForLoopExpression, WhileLoopExpression};
 use pipeline::PipelineExpression;
 use serde::Serialize;
@@ -58,6 +61,16 @@ impl Expression {
         return Ok(Expression::new(expression, operations));
     }
 
+    pub fn get_type(&self, context: &mut PostProcessContext) -> Result<Type, PostProcessError> {
+        let mut left = self.first.get_type(context)?;
+        for (operator, right) in &self.operations {
+            let right = right.get_type(context)?;
+            left = operator.get_type(left, right)?;
+        }
+
+        return Ok(left);
+    }
+
     pub fn evaluate<E: Executor>(
         &self,
         stack: &mut Stack,
@@ -85,8 +98,6 @@ impl Expression {
 
 macro_rules! expression_content {
     ([$($expression_type:ident,)*], [$($dependent_expression:ident,)*]) => {
-        use crate::components::Evaluatable;
-        use crate::components::Parsable;
 
         #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
         pub enum BaseExpression {
@@ -126,11 +137,21 @@ macro_rules! expression_content {
                 return Ok(Err(inner))
             }
 
+            fn get_type(&self, context: &mut PostProcessContext) -> Result<Type, PostProcessError> {
+                match self {
+                    $(
+                        Self::$expression_type(value) => value.get_type(context),
+                    )*
+                    $(
+                        Self::$dependent_expression(value) => value.get_type(context),
+                    )*
+                }
+            }
+
             fn evaluate<E: Executor>(
                 &self,
                 stack: &mut Stack,
-                executor: &mut E
-,
+                executor: &mut E,
             ) -> EvaluationResult<Value> {
                 match self {
                     $(
@@ -184,4 +205,27 @@ impl BaseExpression {
             }
         }
     }
+}
+
+trait ExpressionComponent {
+    fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
+        tokens: &mut Backtrackable<I>,
+    ) -> Result<Option<Self>, ParserError>
+    where
+        Self: Sized;
+    fn get_type(&self, context: &mut PostProcessContext) -> Result<Type, PostProcessError>;
+    fn evaluate<E: Executor>(&self, stack: &mut Stack, executor: &mut E)
+        -> EvaluationResult<Value>;
+}
+
+trait DependentExpressionComponent {
+    fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
+        inner: BaseExpression,
+        tokens: &mut Backtrackable<I>,
+    ) -> Result<Result<Self, BaseExpression>, ParserError>
+    where
+        Self: Sized;
+    fn get_type(&self, context: &mut PostProcessContext) -> Result<Type, PostProcessError>;
+    fn evaluate<E: Executor>(&self, stack: &mut Stack, executor: &mut E)
+        -> EvaluationResult<Value>;
 }

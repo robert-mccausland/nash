@@ -8,4 +8,4 @@ error:
   ExecutionError:
     message: "Can't assign to a variable that is not mutable"
     call_stack: []
-exit_code: 103
+exit_code: 104

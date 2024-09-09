@@ -1,12 +1,16 @@
 1. cd
-2. empty array initialization, using type inference. This will probably require some sort of pre-processing step, which also could check types / variable scope and a bunch of other stuff.
-3. Unary operators
-4. Lazy operators
-5. Capturing scope inside functions
-6. Static analysis
-7. Syntax highlighting
-8. Linting
-9. Objects instead of tuples maybe?
-10. Optional types?
-11. Support piping stderr of a command
-12. Allow assigning mutable values to non-mutable types 
+2. Unary operators
+3. Lazy operators
+4. Capturing scope inside functions
+5. Static analysis
+6. Syntax highlighting
+7. Linting
+8. Objects instead of tuples maybe?
+9. Optional types?
+10. Support piping stderr of a command
+11. Allow assigning mutable values to non-mutable types 
+12. Rethink errors, codes error messages and such.
+13. More CLI features (e.g. inline code execution)
+14. Better post processing for command pipelines
+15. Better name for the post processing step
+16. Ability to infer missing types & fix empty array type initialization

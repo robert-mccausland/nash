@@ -7,3 +7,8 @@
 7. Cross platform compatibility with newlines and such needing to be consistent across environments but also would be good for them to match the environment they are in.
 8. Command class just has a bunch of funky logic in it, probably needs to be split into more files & sorted out a bit.
 9. In the command class always use Stdio for redirecting to other commands or files, only create pipe if we need to capture output in the program.
+10. Refactor integration tests to read code from files instead of inline code.
+11. What to do about errors that should never happen anymore due to the post-processor catching them?
+12. Unit tests (lol)
+13. Builtin functions are pretty messy at the moment
+14. Function calls & Variables are considered the same expression and its quite confusing

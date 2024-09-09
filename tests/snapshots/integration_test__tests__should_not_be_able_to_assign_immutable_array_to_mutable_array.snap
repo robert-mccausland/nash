@@ -5,7 +5,6 @@ expression: "run_code(r#\"\n        var mut array: mut [integer];\n        array
 stdout: ""
 stderr: ""
 error:
-  ExecutionError:
-    message: "Can not assign a value of type [integer] to a variable of type mut [integer]"
-    call_stack: []
+  PostProcessError:
+    message: "Unable to assign a value of type '[integer]' to a variable of type 'mut [integer]'"
 exit_code: 103

@@ -67,3 +67,67 @@ where
         }
     }
 }
+
+pub fn is_duplicates<I: IntoIterator>(value: I) -> Option<I::Item>
+where
+    I::Item: PartialEq,
+{
+    let mut iter = value.into_iter();
+    let previous = iter.next()?;
+
+    while let Some(value) = iter.next() {
+        if value != previous {
+            return None;
+        }
+    }
+
+    return Some(previous);
+}
+
+mod test {
+    use super::*;
+
+    #[test]
+    fn are_duplicates_should_return_none_for_empty_collection() {
+        assert_eq!(is_duplicates(Vec::<()>::new()), None)
+    }
+
+    #[test]
+    fn are_duplicates_should_return_none_for_collection_with_non_duplicate_values() {
+        assert_eq!(is_duplicates(vec![1, 2, 3]), None)
+    }
+
+    #[derive(Debug, Clone)]
+    struct TestItem<T> {
+        value: T,
+        _marker: u32,
+    }
+
+    impl<T> PartialEq for TestItem<T>
+    where
+        T: Eq,
+    {
+        fn eq(&self, other: &Self) -> bool {
+            self.value == other.value
+        }
+    }
+
+    #[test]
+    fn are_duplicates_should_return_first_item_for_collection_with_duplicate_values() {
+        let item1 = TestItem::<u32> {
+            value: 1,
+            _marker: 1,
+        };
+        let item2 = TestItem::<u32> {
+            value: 1,
+            _marker: 2,
+        };
+
+        let result = is_duplicates(vec![item1.clone(), item2])
+            .expect("Expected are_duplicates to return Some");
+        assert_eq!(
+            result._marker, item1._marker,
+            "Expected item returned by are_duplicates to be the first item of the array"
+        );
+    }
+}

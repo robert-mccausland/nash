@@ -2,9 +2,13 @@ use serde::Serialize;
 
 use crate::{
     components::{
-        errors::ParserError, stack::Stack, values::Value, Evaluatable, EvaluationResult, Parsable,
-        Tokens,
+        errors::ParserError,
+        root::expressions::ExpressionComponent,
+        stack::Stack,
+        values::{Type, Value},
+        EvaluationResult, PostProcessContext, Tokens,
     },
+    errors::PostProcessError,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
     Executor,
@@ -65,7 +69,7 @@ impl<'a, I: IntoIterator<Item = &'a str>> From<I> for CommandLiteral {
     }
 }
 
-impl Parsable for CommandLiteral {
+impl ExpressionComponent for CommandLiteral {
     fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
         tokens: &mut Backtrackable<I>,
     ) -> Result<Option<Self>, ParserError> {
@@ -76,14 +80,11 @@ impl Parsable for CommandLiteral {
             None
         })
     }
-}
 
-impl Evaluatable for CommandLiteral {
     fn evaluate<E: Executor>(
         &self,
         stack: &mut Stack,
-        executor: &mut E
-,
+        executor: &mut E,
     ) -> EvaluationResult<Value> {
         let result = Value::Command(
             self.command.resolve(stack, executor)?,
@@ -94,5 +95,9 @@ impl Evaluatable for CommandLiteral {
         );
 
         return Ok(result);
+    }
+
+    fn get_type(&self, _context: &mut PostProcessContext) -> Result<Type, PostProcessError> {
+        return Ok(Type::Command);
     }
 }

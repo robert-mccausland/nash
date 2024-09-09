@@ -224,11 +224,11 @@ impl Stack {
         self.scopes = outer_scope;
         let result = if let Err(exception) = result {
             match exception {
-                EvaluationException::AlterControlFlow(ControlFlowOptions::Return(value)) => value,
-                EvaluationException::AlterControlFlow(ControlFlowOptions::Break()) => {
+                EvaluationException::ControlFlow(ControlFlowOptions::Return(value)) => value,
+                EvaluationException::ControlFlow(ControlFlowOptions::Break()) => {
                     return Err("Break must be used in a loop block".into())
                 }
-                EvaluationException::AlterControlFlow(ControlFlowOptions::Continue()) => {
+                EvaluationException::ControlFlow(ControlFlowOptions::Continue()) => {
                     return Err("Continue must be used in a loop block".into())
                 }
                 err => return Err(err),

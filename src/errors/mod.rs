@@ -43,7 +43,7 @@ macro_rules! impl_error {
 }
 
 macro_rules! nash_error {
-    ($($error:ident,)*) => {
+    ($($error:ident),*) => {
         #[derive(Debug, PartialEq, Eq, Serialize)]
         pub enum NashError {
             $(
@@ -90,7 +90,7 @@ macro_rules! nash_error {
     };
 }
 
-nash_error![LexerError, ParserError, ExecutionError,];
+nash_error![LexerError, ParserError, PostProcessError, ExecutionError];
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct LexerError {
@@ -149,6 +149,26 @@ impl Display for ParserError {
 impl_error!(ParserError, 102);
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
+
+pub struct PostProcessError {
+    pub message: String,
+}
+
+impl PostProcessError {
+    fn new(message: String) -> Self {
+        Self { message }
+    }
+}
+
+impl Display for PostProcessError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.message.fmt(f)
+    }
+}
+
+impl_error!(PostProcessError, 103);
+
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct ExecutionError {
     pub message: String,
     pub call_stack: Option<Vec<String>>,
@@ -173,4 +193,4 @@ impl Display for ExecutionError {
     }
 }
 
-impl_error!(ExecutionError, 103);
+impl_error!(ExecutionError, 104);

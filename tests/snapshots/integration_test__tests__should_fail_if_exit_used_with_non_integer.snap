@@ -1,11 +1,10 @@
 ---
 source: tests/integration_test.rs
-expression: "run_code(r#\"\nexit \"test\";\n\"#)"
+expression: "run_code(r#\"\nexit \"test\";\n\"#, \"\", |_| {})"
 ---
 stdout: ""
 stderr: ""
 error:
-  ExecutionError:
-    message: exit statement must be provided with an integer value
-    call_stack: []
+  PostProcessError:
+    message: Value provided to an exit statement must be an integer
 exit_code: 103

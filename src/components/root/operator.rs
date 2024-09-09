@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use crate::{
-    components::values::Value,
+    components::values::{Type, Value},
     lexer::{Token, TokenValue},
     ParserError,
 };
@@ -67,32 +67,6 @@ impl Operator {
         return Ok(None);
     }
 
-    pub fn execute(&self, left: Value, right: Value) -> Result<Value, ExecutionError> {
-        use Operator::*;
-        use Value::*;
-
-        // I kinda hate how this looks but also its sorta just fine
-        match (self, left, right) {
-            (Addition, Integer(left), Integer(right)) => Ok((left + right).into()),
-            (Addition, String(left), String(right)) => Ok((left + right.as_str()).into()),
-            (Subtraction, Integer(left), Integer(right)) => Ok((left - right).into()),
-            (Multiplication, Integer(left), Integer(right)) => Ok((left * right).into()),
-            (Division, Integer(left), Integer(right)) => Ok((left / right).into()),
-            (Remainder, Integer(left), Integer(right)) => Ok((left % right).into()),
-            (Equal, left, right) => Ok((left == right).into()),
-            (NotEqual, left, right) => Ok((left != right).into()),
-            (LessThan, Integer(left), Integer(right)) => Ok((left < right).into()),
-            (GreaterThan, Integer(left), Integer(right)) => Ok((left > right).into()),
-            (LessThanOrEqual, Integer(left), Integer(right)) => Ok((left <= right).into()),
-            (GreaterThanOrEqual, Integer(left), Integer(right)) => Ok((left >= right).into()),
-            (And, Boolean(left), Boolean(right)) => Ok((left && right).into()),
-            (Or, Boolean(left), Boolean(right)) => Ok((left || right).into()),
-            (operator, left, right) => {
-                Err(format!("Invalid operator expression {left:?} {operator:?} {right:?}.").into())
-            }
-        }
-    }
-
     pub fn chains_with(&self, value: &Self) -> bool {
         macro_rules! return_true_if_match {
             ($pattern:pat) => {{
@@ -109,3 +83,77 @@ impl Operator {
         return false;
     }
 }
+
+macro_rules! impl_operator {
+    [$($operator:ident($left:ident, $right:ident) -> $return_type:ident { $operation:expr }),*] => {
+        impl Operator {
+            pub fn execute(&self, left: Value, right: Value) -> Result<Value, ExecutionError> {
+                match (self, left, right) {
+                    $(
+                        (Operator::$operator, Value::$left(left), Value::$right(right)) => Ok(($operation)(left, right).into()),
+                    )*
+
+                    // Manually implement operators that act on all types for now to make the macro simpler
+                    (Operator::Equal, left, right) => Ok((left == right).into()),
+                    (Operator::NotEqual, left, right) => Ok((left != right).into()),
+
+                    (operator, left, right) => {
+                        Err(format!("Invalid operator expression {left:?} {operator:?} {right:?}.").into())
+                    }
+                }
+            }
+
+            pub fn get_type(&self, left: Type, right: Type) -> Result<Type, String> {
+                match (self, left, right) {
+                    $(
+                        (Operator::$operator, Type::$left, Type::$right) => Ok(Type::$return_type),
+                    )*
+                    (Operator::Equal, _, _) => Ok(Type::Boolean),
+                    (Operator::NotEqual, _, _) => Ok(Type::Boolean),
+                    (operator, left, right) => {
+                        Err(format!("Invalid operator expression {left:?} {operator:?} {right:?}.").into())
+                    }
+                }
+            }
+        }
+    };
+}
+
+impl_operator![
+    Addition(Integer, Integer) -> Integer {
+        |left, right| left + right
+    },
+    Addition(String, String) -> String {
+        |left, right: String| left + right.as_str()
+    },
+    Subtraction(Integer, Integer) -> Integer {
+        |left, right| left - right
+    },
+    Multiplication(Integer, Integer) -> Integer {
+        |left, right| left * right
+    },
+    Division(Integer, Integer) -> Integer {
+        |left, right| left / right
+    },
+    Remainder(Integer, Integer) -> Integer {
+        |left, right| left % right
+    },
+    LessThan(Integer, Integer) -> Boolean{
+        |left, right| left < right
+    },
+    GreaterThan(Integer, Integer) -> Boolean{
+        |left, right| left > right
+    },
+    LessThanOrEqual(Integer, Integer) -> Boolean{
+        |left, right| left <= right
+    },
+    GreaterThanOrEqual(Integer, Integer) -> Boolean{
+        |left, right| left >= right
+    },
+    And(Boolean, Boolean) -> Boolean{
+        |left, right| left && right
+    },
+    Or(Boolean, Boolean) -> Boolean{
+        |left, right| left || right
+    }
+];

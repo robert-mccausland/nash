@@ -1,14 +1,19 @@
 use serde::Serialize;
 
 use crate::{
-    components::{stack::Stack, values::Value, Evaluatable, EvaluationResult, Parsable, Tokens},
+    components::{
+        stack::Stack,
+        values::{Type, Value},
+        EvaluationResult, PostProcessContext, Tokens,
+    },
     constants::MUT,
+    errors::PostProcessError,
     lexer::{Token, TokenValue},
-    utils::iterators::Backtrackable,
+    utils::iterators::{is_duplicates, Backtrackable},
     Executor, ParserError,
 };
 
-use super::Expression;
+use super::{Expression, ExpressionComponent};
 
 macro_rules! collection_expression_impl {
     ($expression_type:ident, $start_token:expr, $end_token:expr) => {
@@ -86,7 +91,7 @@ collection_expression_impl!(
     TokenValue::RightBracket()
 );
 
-impl Parsable for TupleExpression {
+impl ExpressionComponent for TupleExpression {
     fn try_parse<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
         tokens: &mut crate::utils::iterators::Backtrackable<I>,
     ) -> Result<Option<Self>, crate::errors::ParserError> {
@@ -102,15 +107,23 @@ impl Parsable for TupleExpression {
 
         return Ok(Some(result));
     }
-}
 
-impl Evaluatable for TupleExpression {
     fn evaluate<E: Executor>(
         &self,
         stack: &mut Stack,
         executor: &mut E,
     ) -> EvaluationResult<Value> {
         Ok(Value::Tuple(evaluate_collection(&self.values, stack, executor)?).into())
+    }
+
+    fn get_type(&self, context: &mut PostProcessContext) -> Result<Type, PostProcessError> {
+        let types = self
+            .values
+            .iter()
+            .map(|value| value.get_type(context))
+            .collect::<Result<_, PostProcessError>>()?;
+
+        return Ok(Type::Tuple(types));
     }
 }
 
@@ -120,15 +133,13 @@ collection_expression_impl!(
     TokenValue::RightSquare()
 );
 
-impl Parsable for ArrayExpression {
+impl ExpressionComponent for ArrayExpression {
     fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
         tokens: &mut Backtrackable<I>,
     ) -> Result<Option<Self>, ParserError> {
         ArrayExpression::try_parse_impl(tokens)
     }
-}
 
-impl Evaluatable for ArrayExpression {
     fn evaluate<E: Executor>(
         &self,
         stack: &mut Stack,
@@ -146,5 +157,19 @@ impl Evaluatable for ArrayExpression {
         }
 
         return Ok(Value::new_array(values, array_type, self.mutable)?.into());
+    }
+
+    fn get_type(&self, context: &mut PostProcessContext) -> Result<Type, PostProcessError> {
+        let types = self
+            .values
+            .iter()
+            .map(|value| value.get_type(context))
+            .collect::<Result<Vec<_>, PostProcessError>>()?;
+
+        let Some(array_type) = is_duplicates(types) else {
+            return Err("Expected all values of an array to be the same type".into());
+        };
+
+        return Ok(Type::Array(Box::new(array_type), self.mutable));
     }
 }

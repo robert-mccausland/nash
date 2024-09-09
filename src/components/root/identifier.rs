@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use crate::{
-    components::{Parsable, Tokens},
+    components::Tokens,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
     ParserError,
@@ -20,8 +20,8 @@ impl From<&str> for Identifier {
     }
 }
 
-impl Parsable for Identifier {
-    fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
+impl Identifier {
+    pub fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
         tokens: &mut Backtrackable<I>,
     ) -> Result<Option<Self>, ParserError> {
         Ok(

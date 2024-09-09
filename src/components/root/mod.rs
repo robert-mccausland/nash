@@ -1,12 +1,12 @@
 use serde::Serialize;
 use statement::Statement;
 
-use crate::{lexer::Token, utils::iterators::Backtrackable, Executor};
+use crate::{errors::PostProcessError, lexer::Token, utils::iterators::Backtrackable, Executor};
 
 use super::{
     errors::{ExecutionError, ParserError},
     stack::Stack,
-    ControlFlowOptions, EvaluationException, Tokens,
+    ControlFlowOptions, EvaluationException, PostProcessContext, Scope, ScopeType, Tokens,
 };
 
 pub use function::Function;
@@ -15,7 +15,6 @@ mod block;
 mod expressions;
 mod function;
 mod identifier;
-mod literals;
 mod operator;
 mod statement;
 mod type_definition;
@@ -52,11 +51,47 @@ impl Root {
         });
     }
 
+    pub fn post_process(&self, context: &mut PostProcessContext) -> Result<(), PostProcessError> {
+        // Add new variable scope for the root block
+        context.scopes.push(Scope::new(ScopeType::Root));
+
+        for function in &self.functions {
+            function.code.post_process_with_initializer(
+                |context| {
+                    for (name, value_type) in &function.arguments {
+                        context.declare_variable(name.value.clone(), value_type.value.clone())
+                    }
+
+                    Ok(())
+                },
+                ScopeType::Function(function.return_type.value.clone()),
+                context,
+            )?;
+
+            let arguments = function
+                .arguments
+                .iter()
+                .map(|(_, type_definition)| type_definition.value.clone())
+                .collect();
+            context.functions.insert(
+                function.name.value.clone(),
+                (arguments, function.return_type.value.clone()),
+            );
+        }
+
+        for statement in &self.statements {
+            statement.post_process(context)?;
+        }
+
+        context.scopes.pop();
+
+        Ok(())
+    }
+
     pub fn execute<E: Executor>(
         &self,
         stack: &mut Stack,
-        executor: &mut E
-,
+        executor: &mut E,
     ) -> Result<u8, ExecutionError> {
         for function in &self.functions {
             stack.declare_function(&function.name.value, function.clone())?;
@@ -67,17 +102,17 @@ impl Root {
         for statement in &self.statements {
             if let Err(exception) = statement.execute(stack, executor) {
                 match exception {
-                    EvaluationException::AlterControlFlow(ControlFlowOptions::Exit(value)) => {
+                    EvaluationException::ControlFlow(ControlFlowOptions::Exit(value)) => {
                         exit_code = value;
                         break;
                     }
-                    EvaluationException::AlterControlFlow(ControlFlowOptions::Return(_)) => {
+                    EvaluationException::ControlFlow(ControlFlowOptions::Return(_)) => {
                         return Err("Return must be used in a function block".into())
                     }
-                    EvaluationException::AlterControlFlow(ControlFlowOptions::Break()) => {
+                    EvaluationException::ControlFlow(ControlFlowOptions::Break()) => {
                         return Err("Break must be used in a loop block".into())
                     }
-                    EvaluationException::AlterControlFlow(ControlFlowOptions::Continue()) => {
+                    EvaluationException::ControlFlow(ControlFlowOptions::Continue()) => {
                         return Err("Continue must be used in a loop block".into())
                     }
                     EvaluationException::Error(err) => return Err(err),

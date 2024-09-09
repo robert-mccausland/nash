@@ -1,6 +1,6 @@
 ---
 source: tests/integration_test.rs
-expression: "run_code(r#\"\nvar test: void;\n\"#)"
+expression: "run_code(r#\"\nvar mut test: void;\n\"#, \"\", |_| {})"
 ---
 stdout: ""
 stderr: ""
@@ -8,4 +8,4 @@ error:
   ExecutionError:
     message: Variables must not be declared with a type of void
     call_stack: []
-exit_code: 103
+exit_code: 104

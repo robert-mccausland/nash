@@ -1,0 +1,10 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\n        func test(str: string, num: integer, bool: boolean) {}\n        test(123, \"test\", false);\n        \"#,\n    \"\", |_| {})"
+---
+stdout: ""
+stderr: ""
+error:
+  PostProcessError:
+    message: Arguments are not correct
+exit_code: 103

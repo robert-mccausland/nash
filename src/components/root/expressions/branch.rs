@@ -1,13 +1,18 @@
 use serde::Serialize;
 
 use crate::{
-    components::{stack::Stack, values::Value, Evaluatable, EvaluationResult, Parsable, Tokens},
+    components::{
+        stack::Stack,
+        values::{Type, Value},
+        EvaluationResult, PostProcessContext, ScopeType, Tokens,
+    },
     constants::{ELSE, IF},
+    errors::PostProcessError,
     lexer::TokenValue,
     Executor,
 };
 
-use super::{Block, Expression};
+use super::{Block, Expression, ExpressionComponent};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BranchExpression {
@@ -15,7 +20,7 @@ pub struct BranchExpression {
     default_block: Option<Block>,
 }
 
-impl Parsable for BranchExpression {
+impl ExpressionComponent for BranchExpression {
     fn try_parse<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
         tokens: &mut crate::utils::iterators::Backtrackable<I>,
     ) -> Result<Option<Self>, crate::errors::ParserError> {
@@ -49,14 +54,11 @@ impl Parsable for BranchExpression {
 
         return Ok(None);
     }
-}
 
-impl Evaluatable for BranchExpression {
     fn evaluate<E: Executor>(
         &self,
         stack: &mut Stack,
-        executor: &mut E
-,
+        executor: &mut E,
     ) -> EvaluationResult<Value> {
         for (condition, block) in &self.conditional_blocks {
             let condition_result = condition.evaluate(stack, executor)?;
@@ -74,5 +76,25 @@ impl Evaluatable for BranchExpression {
         } else {
             Ok(Value::Void.into())
         }
+    }
+
+    fn get_type(&self, context: &mut PostProcessContext) -> Result<Type, PostProcessError> {
+        for (condition, block) in &self.conditional_blocks {
+            let Type::Boolean = condition.get_type(context)? else {
+                return Err("This expression must return a boolean".into());
+            };
+
+            block.post_process_with_initializer(|_| Ok(()), ScopeType::Conditional, context)?;
+        }
+
+        if let Some(default_block) = &self.default_block {
+            default_block.post_process_with_initializer(
+                |_| Ok(()),
+                ScopeType::Conditional,
+                context,
+            )?;
+        }
+
+        Ok(Type::Void)
     }
 }

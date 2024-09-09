@@ -8,4 +8,4 @@ error:
   ExecutionError:
     message: File must be in open mode to be used as data source
     call_stack: []
-exit_code: 103
+exit_code: 104

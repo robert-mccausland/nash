@@ -1,8 +1,13 @@
 use crate::{
-    components::{stack::Stack, values::Value, Evaluatable, EvaluationResult, Parsable},
+    components::{
+        stack::Stack,
+        values::{Type, Value},
+        EvaluationResult, PostProcessContext, Tokens,
+    },
     constants::{FALSE, TRUE},
-    errors::ParserError,
+    errors::{ParserError, PostProcessError},
     lexer::{Token, TokenValue},
+    utils::iterators::Backtrackable,
     Executor,
 };
 
@@ -13,7 +18,7 @@ pub use command::CommandLiteral;
 use serde::Serialize;
 pub use string::StringLiteral;
 
-use super::{Backtrackable, Tokens};
+use super::ExpressionComponent;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct IntegerLiteral {
@@ -39,7 +44,7 @@ impl From<u32> for IntegerLiteral {
     }
 }
 
-impl Parsable for IntegerLiteral {
+impl ExpressionComponent for IntegerLiteral {
     fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
         tokens: &mut Backtrackable<I>,
     ) -> Result<Option<Self>, ParserError> {
@@ -52,12 +57,17 @@ impl Parsable for IntegerLiteral {
             },
         )
     }
-}
 
-impl Evaluatable for IntegerLiteral {
-    fn evaluate<E: Executor>(&self, _stack: &mut Stack, _context: &mut E
-) -> EvaluationResult<Value> {
+    fn evaluate<E: Executor>(
+        &self,
+        _stack: &mut Stack,
+        _context: &mut E,
+    ) -> EvaluationResult<Value> {
         Ok(Value::Integer(self.value.try_into().unwrap()).into())
+    }
+
+    fn get_type(&self, _context: &mut PostProcessContext) -> Result<Type, PostProcessError> {
+        return Ok(Type::Integer);
     }
 }
 
@@ -71,7 +81,7 @@ impl From<bool> for BooleanLiteral {
         BooleanLiteral { value }
     }
 }
-impl Parsable for BooleanLiteral {
+impl ExpressionComponent for BooleanLiteral {
     fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
         tokens: &mut Backtrackable<I>,
     ) -> Result<Option<Self>, ParserError> {
@@ -87,11 +97,16 @@ impl Parsable for BooleanLiteral {
             },
         )
     }
-}
 
-impl Evaluatable for BooleanLiteral {
-    fn evaluate<E: Executor>(&self, _stack: &mut Stack, _context: &mut E
-) -> EvaluationResult<Value> {
+    fn evaluate<E: Executor>(
+        &self,
+        _stack: &mut Stack,
+        _context: &mut E,
+    ) -> EvaluationResult<Value> {
         Ok(Value::Boolean(self.value).into())
+    }
+
+    fn get_type(&self, _context: &mut PostProcessContext) -> Result<Type, PostProcessError> {
+        Ok(Type::Boolean)
     }
 }

@@ -2,16 +2,20 @@ use serde::Serialize;
 
 use crate::{
     components::{
-        root::identifier::Identifier, stack::Stack, values::Value, ControlFlowOptions, Evaluatable,
-        EvaluationException, EvaluationResult, Parsable, Tokens,
+        root::identifier::Identifier,
+        stack::Stack,
+        values::{Type, Value},
+        ControlFlowOptions, EvaluationException, EvaluationResult, PostProcessContext, ScopeType,
+        Tokens,
     },
     constants::{FOR, IN, WHILE},
+    errors::PostProcessError,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
     Executor, ParserError,
 };
 
-use super::{Block, Expression};
+use super::{Block, Expression, ExpressionComponent};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ForLoopExpression {
@@ -20,7 +24,7 @@ pub struct ForLoopExpression {
     loop_body: Block,
 }
 
-impl Parsable for ForLoopExpression {
+impl ExpressionComponent for ForLoopExpression {
     fn try_parse<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
         tokens: &mut crate::utils::iterators::Backtrackable<I>,
     ) -> Result<Option<Self>, crate::errors::ParserError> {
@@ -47,9 +51,7 @@ impl Parsable for ForLoopExpression {
 
         return Ok(None);
     }
-}
 
-impl Evaluatable for ForLoopExpression {
     fn evaluate<E: Executor>(
         &self,
         stack: &mut Stack,
@@ -66,14 +68,11 @@ impl Evaluatable for ForLoopExpression {
                 executor,
             );
 
-            if let Err(EvaluationException::AlterControlFlow(ControlFlowOptions::Break())) = result
-            {
+            if let Err(EvaluationException::ControlFlow(ControlFlowOptions::Break())) = result {
                 break;
             }
 
-            if let Err(EvaluationException::AlterControlFlow(ControlFlowOptions::Continue())) =
-                result
-            {
+            if let Err(EvaluationException::ControlFlow(ControlFlowOptions::Continue())) = result {
                 continue;
             }
 
@@ -81,6 +80,23 @@ impl Evaluatable for ForLoopExpression {
         }
 
         Ok(Value::Void.into())
+    }
+
+    fn get_type(&self, context: &mut PostProcessContext) -> Result<Type, PostProcessError> {
+        let Type::Array(inner_type, _) = self.array_expression.get_type(context)? else {
+            return Err("For expression must evaluate to array".into());
+        };
+
+        self.loop_body.post_process_with_initializer(
+            |context| {
+                context.declare_variable(self.item_name.value.clone(), *inner_type);
+                Ok(())
+            },
+            ScopeType::Looped,
+            context,
+        )?;
+
+        Ok(Type::Void)
     }
 }
 
@@ -90,7 +106,7 @@ pub struct WhileLoopExpression {
     loop_body: Block,
 }
 
-impl Parsable for WhileLoopExpression {
+impl ExpressionComponent for WhileLoopExpression {
     fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
         tokens: &mut Backtrackable<I>,
     ) -> Result<Option<Self>, ParserError> {
@@ -108,9 +124,7 @@ impl Parsable for WhileLoopExpression {
 
         return Ok(None);
     }
-}
 
-impl Evaluatable for WhileLoopExpression {
     fn evaluate<E: Executor>(
         &self,
         stack: &mut Stack,
@@ -127,18 +141,26 @@ impl Evaluatable for WhileLoopExpression {
             }
 
             let result = self.loop_body.execute(stack, executor);
-            if let Err(EvaluationException::AlterControlFlow(ControlFlowOptions::Break())) = result
-            {
+            if let Err(EvaluationException::ControlFlow(ControlFlowOptions::Break())) = result {
                 return Ok(Value::Void.into());
             }
 
-            if let Err(EvaluationException::AlterControlFlow(ControlFlowOptions::Continue())) =
-                result
-            {
+            if let Err(EvaluationException::ControlFlow(ControlFlowOptions::Continue())) = result {
                 continue;
             }
 
             result?;
         }
+    }
+
+    fn get_type(&self, context: &mut PostProcessContext) -> Result<Type, PostProcessError> {
+        let Type::Boolean = self.check_expression.get_type(context)? else {
+            return Err("This expression must resolve to a boolean".into());
+        };
+
+        self.loop_body
+            .post_process_with_initializer(|_| Ok(()), ScopeType::Looped, context)?;
+
+        Ok(Type::Void)
     }
 }

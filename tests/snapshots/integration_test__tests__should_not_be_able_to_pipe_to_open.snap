@@ -8,4 +8,4 @@ error:
   ExecutionError:
     message: File must be in write or append mode to be used as a destination
     call_stack: []
-exit_code: 103
+exit_code: 104

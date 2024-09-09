@@ -1,6 +1,6 @@
 ---
 source: tests/integration_test.rs
-expression: "run_code(r#\"\nout((1 + 2 + 3 + 4 * 10).fmt());\n\"#)"
+expression: "run_code(r#\"\nout((1 + 2 + 3 + 4 * 10).fmt());\n\"#, \"\", |_| {})"
 ---
 stdout: ""
 stderr: ""
@@ -8,4 +8,4 @@ error:
   ExecutionError:
     message: Chaining Addition with Multiplication is not supported.
     call_stack: []
-exit_code: 103
+exit_code: 104

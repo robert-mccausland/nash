@@ -1,13 +1,20 @@
 use serde::Serialize;
 
 use crate::{
-    components::{stack::Stack, values::Value, EvaluationResult, Parsable, Tokens},
+    components::{
+        stack::Stack,
+        values::{Type, Value},
+        EvaluationResult, PostProcessContext, Tokens,
+    },
+    errors::PostProcessError,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
     Executor, ParserError,
 };
 
-use super::{variable::VariableExpression, BaseExpression};
+use super::{
+    variable::VariableExpression, BaseExpression, DependentExpressionComponent, ExpressionComponent,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct AccessorExpression {
@@ -15,8 +22,8 @@ pub struct AccessorExpression {
     accessor: Accessor,
 }
 
-impl AccessorExpression {
-    pub fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
+impl DependentExpressionComponent for AccessorExpression {
+    fn try_parse<'a, I: Iterator<Item = &'a Token<'a>>>(
         inner: BaseExpression,
         tokens: &mut Backtrackable<I>,
     ) -> Result<Result<Self, BaseExpression>, ParserError> {
@@ -30,7 +37,7 @@ impl AccessorExpression {
         }));
     }
 
-    pub fn evaluate<E: Executor>(
+    fn evaluate<E: Executor>(
         &self,
         stack: &mut Stack,
         executor: &mut E,
@@ -54,6 +61,25 @@ impl AccessorExpression {
                 variable.evaluate_on_instance(Some(inner), stack, executor)?
             }
         })
+    }
+
+    fn get_type(&self, context: &mut PostProcessContext) -> Result<Type, PostProcessError> {
+        let inner_type = self.inner.get_type(context)?;
+
+        match &self.accessor {
+            Accessor::Integer(index) => {
+                let Type::Tuple(tuple_types) = inner_type else {
+                    todo!("Error handling needed :)")
+                };
+
+                let Some(value) = tuple_types.get::<usize>((*index).try_into().unwrap()) else {
+                    todo!("Error handling needed :)")
+                };
+
+                Ok(value.clone())
+            }
+            Accessor::Variable(variable) => Ok(variable.get_type_on_instance(inner_type, context)?),
+        }
     }
 }
 

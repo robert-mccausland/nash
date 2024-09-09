@@ -1,19 +1,24 @@
 use serde::Serialize;
 
 use crate::{
-    components::{stack::Stack, values::Value, Evaluatable, Parsable, Tokens},
+    components::{
+        stack::Stack,
+        values::{Type, Value},
+        EvaluationResult, PostProcessContext, Tokens,
+    },
+    errors::PostProcessError,
     lexer::TokenValue,
     Executor,
 };
 
-use super::Expression;
+use super::{Expression, ExpressionComponent};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BracketExpression {
     inner: Box<Expression>,
 }
 
-impl Parsable for BracketExpression {
+impl ExpressionComponent for BracketExpression {
     fn try_parse<'a, I: Iterator<Item = &'a crate::lexer::Token<'a>>>(
         tokens: &mut crate::utils::iterators::Backtrackable<I>,
     ) -> Result<Option<Self>, crate::ParserError> {
@@ -37,14 +42,16 @@ impl Parsable for BracketExpression {
             inner: Box::new(inner),
         }));
     }
-}
 
-impl Evaluatable for BracketExpression {
     fn evaluate<E: Executor>(
         &self,
         stack: &mut Stack,
         executor: &mut E,
-    ) -> crate::components::EvaluationResult<Value> {
+    ) -> EvaluationResult<Value> {
         self.inner.evaluate(stack, executor)
+    }
+
+    fn get_type(&self, context: &mut PostProcessContext) -> Result<Type, PostProcessError> {
+        Ok(self.inner.get_type(context)?)
     }
 }

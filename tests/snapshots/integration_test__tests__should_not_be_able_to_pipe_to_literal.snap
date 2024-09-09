@@ -8,4 +8,4 @@ error:
   ExecutionError:
     message: Invalid type used in command pipeline
     call_stack: []
-exit_code: 103
+exit_code: 104

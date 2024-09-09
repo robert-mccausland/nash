@@ -1,8 +1,13 @@
 use serde::Serialize;
 
 use crate::{
-    components::{stack::Stack, values::Value, ControlFlowOptions, EvaluationResult},
+    components::{
+        stack::Stack,
+        values::{Type, Value},
+        ControlFlowOptions, EvaluationResult, PostProcessContext, ScopeType,
+    },
     constants::{BREAK, CONTINUE, EXIT, MUT, RETURN, VAR},
+    errors::PostProcessError,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
     ExecutionError, Executor, ParserError,
@@ -34,6 +39,85 @@ impl Statement {
         };
         tokens.next();
         return Ok(statement);
+    }
+
+    pub fn post_process(&self, context: &mut PostProcessContext) -> Result<(), PostProcessError> {
+        match self {
+            Statement::Declaration(name, variable_type) => {
+                context.declare_variable(name.value.clone(), variable_type.value.clone());
+            }
+            Statement::DeclarationAssignment(_, assignment, value) => {
+                let variable_type = value.get_type(context)?;
+                match assignment {
+                    Assignment::Simple(name) => {
+                        context.declare_variable(name.value.clone(), variable_type)
+                    }
+                    Assignment::Tuple(_) => todo!(),
+                }
+            }
+            Statement::Assignment(assignment, value) => match assignment {
+                Assignment::Simple(name) => {
+                    let name = name.value.clone();
+                    let variable_type = context.find_variable(name.as_str()).ok_or::<PostProcessError>(
+                        format!("Unable to assign to variable '{name}' has it has not been declared yet").into()
+                    )?;
+                    let value_type = value.get_type(context)?;
+                    if !value_type.is_assignable_to(&variable_type) {
+                        return Err(format!(
+                            "Unable to assign a value of type '{value_type}' to a variable of type '{variable_type}'",
+                        ).into());
+                    }
+                }
+                Assignment::Tuple(_) => todo!(),
+            },
+            Statement::Expression(value) => {
+                value.get_type(context)?;
+            }
+            Statement::Exit(value) => {
+                let Type::Integer = value.get_type(context)? else {
+                    return Err("Value provided to an exit statement must be an integer".into());
+                };
+
+                // Currently everything is inside a root scope, but idk maybe at some point it wont be.
+                dbg!(&context);
+                if !context.has_parent_scope(&ScopeType::Root) {
+                    return Err("Exit statement can only be used from inside the root scope".into());
+                }
+            }
+            Statement::Return(value) => {
+                let Some(scope) = context.get_matching_parent_scope(|scope_type| {
+                    matches!(scope_type, ScopeType::Function(_))
+                }) else {
+                    return Err("Return statement can only be used from inside a function".into());
+                };
+
+                let ScopeType::Function(declared_return_type) = &scope.scope_type else {
+                    panic!()
+                };
+
+                let declared_return_type = declared_return_type.clone();
+                let actual_return_type = value.get_type(context)?;
+                if actual_return_type != declared_return_type {
+                    return Err(format!("Function has a declared return type of {declared_return_type}, but return statement got a type of {actual_return_type}").into());
+                }
+            }
+            Statement::Break() => {
+                if !context.has_parent_scope(&ScopeType::Looped) {
+                    return Err(
+                        "Break statement can only be used from inside a looped block".into(),
+                    );
+                }
+            }
+            Statement::Continue() => {
+                if !context.has_parent_scope(&ScopeType::Looped) {
+                    return Err(
+                        "Continue statement can only be used from inside a looped block".into(),
+                    );
+                }
+            }
+        }
+
+        Ok(())
     }
 
     pub fn execute<E: Executor>(
