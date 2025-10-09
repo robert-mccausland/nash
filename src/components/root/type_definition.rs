@@ -1,14 +1,16 @@
+use std::collections::HashMap;
+
 use serde::Serialize;
 
 use crate::{
-    components::values::Type,
+    components::values::{ObjectFieldType, Type},
     constants::MUT,
     lexer::{Token, TokenValue},
     utils::iterators::Backtrackable,
     ParserError,
 };
 
-use super::Tokens;
+use super::{identifier::Identifier, Tokens};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct TypeDefinition {
@@ -40,6 +42,55 @@ impl TypeDefinition {
             };
             tokens.next();
             return Ok(Type::Array(inner_type.into(), mutable));
+        }
+
+        if let Some(TokenValue::LeftCurly()) = tokens.peek_value() {
+            tokens.next();
+            let mut fields = HashMap::new();
+            loop {
+                if let Some(TokenValue::RightCurly()) = tokens.peek_value() {
+                    tokens.next();
+                    break;
+                }
+
+                let field_name = Identifier::try_parse(tokens)?
+                    .ok_or::<ParserError>("Expected identifier in object type definition".into())?;
+                let Some(TokenValue::Colon()) = tokens.peek_value() else {
+                    return Err("Expected : after field name in object type definition".into());
+                };
+                tokens.next_value();
+
+                let mutable = if let Some(TokenValue::Keyword(MUT)) = tokens.peek_value() {
+                    tokens.next_value();
+                    true
+                } else {
+                    false
+                };
+
+                let inner_type = Self::parse_impl(tokens)?;
+                if let Some(_) = fields.insert(
+                    field_name.value.clone(),
+                    ObjectFieldType {
+                        mutable,
+                        value: inner_type,
+                    },
+                ) {
+                    return Err(
+                        format!("Found duplicate key '{field_name:?}' in type definition").into(),
+                    );
+                }
+
+                let Some(TokenValue::Comma()) = tokens.peek_value() else {
+                    if let Some(TokenValue::RightCurly()) = tokens.peek_value() {
+                        tokens.next();
+                        break;
+                    }
+
+                    return Err("Expected , or } after field value".into());
+                };
+            }
+
+            return Ok(Type::Object(fields));
         }
 
         if mutable {

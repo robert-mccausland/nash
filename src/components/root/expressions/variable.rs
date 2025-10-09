@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use serde::Serialize;
 
 use crate::{
@@ -50,17 +52,35 @@ impl VariableExpression {
                     return Ok(return_type);
                 }
 
-                return Err("Instance function not found".into());
+                return Err(format!(
+                    "Instance function with name '{}' and type signature ({}) not found",
+                    &self.name.value,
+                    argument_types
+                        .iter()
+                        .map(|t| format!("{t}"))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+                .into());
             }
 
-            let Some(function) = context.functions.remove(&self.name.value) else {
+            let Some(function) = context.functions.get(&self.name.value) else {
                 if let Some(return_type) =
                     get_builtin_type(&self.name.value, argument_types.as_slice())
                 {
                     return Ok(return_type);
                 }
 
-                return Err("Function not found".into());
+                return Err(format!(
+                    "Function with name '{}' and type signature ({}) not found",
+                    &self.name.value,
+                    argument_types
+                        .iter()
+                        .map(|t| format!("{t}"))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+                .into());
             };
 
             if function.0 != argument_types {
@@ -69,16 +89,24 @@ impl VariableExpression {
 
             let return_type = function.1.clone();
 
-            context.functions.insert(self.name.value.clone(), function);
-
             return Ok(return_type);
+        } else if let Some(instance_type) = instance_type {
+            let Type::Object(value) = instance_type else {
+                return Err(format!("Unable to get field on non-object type").into());
+            };
+
+            let field_type = value.get(&self.name.value).ok_or::<PostProcessError>(
+                format!("No field with name '{}' found on object", &self.name.value).into(),
+            )?;
+
+            return Ok(field_type.value.clone());
         } else {
             let variable_name = self.name.value.as_str();
             let Some(value_type) = context.find_variable(variable_name) else {
                 return Err(format!("Variable '{variable_name}' has not been declared").into());
             };
 
-            return Ok(value_type);
+            return Ok(value_type.variable_type);
         }
     }
 }
@@ -154,7 +182,16 @@ impl VariableExpression {
         } else if instance.is_none() {
             stack.resolve_variable(&self.name.value)?.into()
         } else {
-            return Err("Instance variables are not yet implemented".into());
+            let Some(Value::Object(object)) = instance else {
+                panic!("Instance variable must only be on object types");
+            };
+
+            let object = object.borrow();
+            let value = object
+                .get(&self.name.value)
+                .expect("Attempted to access instance variable that does not exit");
+
+            value.value.clone()
         })
     }
 }

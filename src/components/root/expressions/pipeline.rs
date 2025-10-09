@@ -148,10 +148,10 @@ impl ExpressionComponent for PipelineExpression {
         // Declare variables after command expressions have been ran
         for command in &self.commands {
             if let Some(capture_exit_code) = &command.capture_exit_code {
-                context.declare_variable(capture_exit_code.value.clone(), Type::Integer);
+                context.declare_variable(capture_exit_code.value.clone(), Type::Integer, false);
             }
             if let Some(capture_stderr) = &command.capture_stderr {
-                context.declare_variable(capture_stderr.value.clone(), Type::String);
+                context.declare_variable(capture_stderr.value.clone(), Type::String, false);
             }
         }
 

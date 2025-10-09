@@ -1,0 +1,19 @@
+#!/bin/nash
+
+# Set objects
+var mut object = {
+  foo: 1,
+  bar: 1
+};
+
+object = { foo: 2, bar: 3 };
+out(object.fmt());
+
+var nested = {
+  mut foo: {
+    bar: 1,
+    baz: 2
+  }
+};
+
+nested.foo = 123;

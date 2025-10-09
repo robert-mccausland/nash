@@ -8,7 +8,7 @@
 8. Objects instead of tuples maybe?
 9. Optional types?
 10. Support piping stderr of a command
-11. Allow assigning mutable values to non-mutable types 
+11. Allow assigning mutable values to non-mutable types
 12. Rethink errors, codes error messages and such.
 13. More CLI features (e.g. inline code execution)
 14. Better post processing for command pipelines

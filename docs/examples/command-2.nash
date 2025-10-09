@@ -1,0 +1,6 @@
+#!/bin/nash
+
+exec `echo test1` => `grep test`;
+
+var echo = `echo test2`;
+exec echo => `grep test`;

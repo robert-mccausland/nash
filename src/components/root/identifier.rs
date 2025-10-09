@@ -1,3 +1,5 @@
+use std::fmt;
+
 use serde::Serialize;
 
 use crate::{
@@ -7,9 +9,15 @@ use crate::{
     ParserError,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Clone, PartialEq, Eq, Serialize)]
 pub struct Identifier {
     pub value: String,
+}
+
+impl fmt::Debug for Identifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.value)
+    }
 }
 
 impl From<&str> for Identifier {

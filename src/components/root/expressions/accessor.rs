@@ -65,7 +65,6 @@ impl DependentExpressionComponent for AccessorExpression {
 
     fn get_type(&self, context: &mut PostProcessContext) -> Result<Type, PostProcessError> {
         let inner_type = self.inner.get_type(context)?;
-
         match &self.accessor {
             Accessor::Integer(index) => {
                 let Type::Tuple(tuple_types) = inner_type else {

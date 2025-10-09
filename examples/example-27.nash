@@ -1,0 +1,60 @@
+#!/bin/nash
+
+# Create object
+var object = {
+  bar: 123,
+  foo: "value"
+};
+
+out(object.fmt());
+out(object.foo);
+out(object.bar.fmt());
+
+# Mutable fields
+var mutable_object = {
+  mut bar: 123,
+  foo: "value"
+};
+
+out(mutable_object.fmt());
+mutable_object.bar = 321;
+out(mutable_object.fmt());
+
+# Nested fields
+var outer = {
+  inner: {
+    field: "value"
+  }
+};
+out(outer.fmt());
+out(outer.inner.field);
+
+# Equivalent structures can be assigned to each other
+var mut object = {
+  foo: "value"
+};
+out(object.fmt());
+object = {
+  foo: "changed"
+};
+out(object.fmt());
+
+# Defining object types
+var mut another_object: { foo: string };
+another_object = object;
+out(another_object.fmt());
+
+# Nested mutable fields
+var outer = {
+  middle: {
+    mut inner: {
+      field: "value"
+    }
+  }
+};
+
+outer.middle.inner = {
+  field: "value2"
+};
+
+out(outer.fmt());

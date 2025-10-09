@@ -140,18 +140,20 @@ impl PostProcessContext {
         }
     }
 
-    fn declare_variable(&mut self, name: String, variable_type: Type) {
-        self.scopes
-            .last_mut()
-            .unwrap()
-            .variables
-            .insert(name, variable_type);
+    fn declare_variable(&mut self, name: String, variable_type: Type, mutable: bool) {
+        self.scopes.last_mut().unwrap().variables.insert(
+            name,
+            Variable {
+                variable_type,
+                mutable,
+            },
+        );
     }
 
-    fn find_variable(&self, name: &str) -> Option<Type> {
+    fn find_variable(&self, name: &str) -> Option<Variable> {
         for scope in &self.scopes {
-            if let Some(variable_type) = scope.variables.get(name) {
-                return Some(variable_type.clone());
+            if let Some(variable) = scope.variables.get(name) {
+                return Some(variable.clone());
             }
         }
 
@@ -179,8 +181,14 @@ impl PostProcessContext {
 
 #[derive(Debug)]
 struct Scope {
-    variables: HashMap<String, Type>,
+    variables: HashMap<String, Variable>,
     scope_type: ScopeType,
+}
+
+#[derive(Debug, Clone)]
+pub struct Variable {
+    pub variable_type: Type,
+    pub mutable: bool,
 }
 
 impl Scope {

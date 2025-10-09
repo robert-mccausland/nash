@@ -1,4 +1,4 @@
-use std::{cell::RefCell, fmt::Display, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, fmt::Display, rc::Rc};
 
 use serde::Serialize;
 
@@ -15,6 +15,22 @@ pub enum Value {
     Array(Rc<RefCell<Vec<Value>>>, Type, bool),
     Tuple(Vec<Value>),
     FileHandle(String, FileMode),
+    Object(Rc<RefCell<HashMap<String, ObjectField>>>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ObjectField {
+    pub value: Value,
+    pub mutable: bool,
+}
+
+impl ObjectField {
+    fn get_type(&self) -> ObjectFieldType {
+        ObjectFieldType {
+            value: self.value.get_type(),
+            mutable: self.mutable,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,6 +55,13 @@ impl Value {
                 Type::Tuple(values.iter().map(|x| x.get_type()).collect::<Vec<_>>())
             }
             Value::FileHandle(_, _) => Type::FileHandle,
+            Value::Object(fields) => Type::Object(
+                fields
+                    .borrow()
+                    .iter()
+                    .map(|(key, value)| (key.clone(), value.get_type()))
+                    .collect::<HashMap<_, _>>(),
+            ),
         }
     }
 
@@ -65,10 +88,8 @@ impl Value {
             mutable,
         ))
     }
-}
 
-impl Display for Value {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    pub fn fmt(&self, f: &mut std::fmt::Formatter<'_>, nesting: usize) -> std::fmt::Result {
         match self {
             Value::Void => f.write_str("void")?,
             Value::String(data) => {
@@ -93,12 +114,35 @@ impl Display for Value {
                     FileMode::Write => f.write_str("<file_handle:write(")?,
                     FileMode::Append => f.write_str("<file_handle:append(")?,
                 };
-                Value::String(path.to_owned()).fmt(f)?;
+                Value::String(path.to_owned()).fmt(f, 0)?;
                 f.write_str(")>")?;
+            }
+            Value::Object(fields) => {
+                f.write_str("{\n")?;
+                let fields = fields.borrow();
+                let mut fields = fields.iter().collect::<Vec<_>>();
+                fields.sort_by_key(|(name, _)| *name);
+                for (key, field) in fields {
+                    let nesting = nesting + 1;
+                    f.write_str("  ".repeat(nesting).as_str())?;
+                    f.write_str(&key)?;
+                    f.write_str(": ")?;
+                    field.value.fmt(f, nesting)?;
+                    f.write_str(",\n")?;
+                }
+
+                f.write_str("  ".repeat(nesting).as_str())?;
+                f.write_str("}")?;
             }
         };
 
         return Ok(());
+    }
+}
+
+impl Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.fmt(f, 0)
     }
 }
 
@@ -130,6 +174,13 @@ pub enum Type {
     Array(Box<Self>, bool),
     Tuple(Vec<Self>),
     FileHandle,
+    Object(HashMap<String, ObjectFieldType>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ObjectFieldType {
+    pub value: Type,
+    pub mutable: bool,
 }
 
 impl Display for Type {
@@ -152,6 +203,26 @@ impl Display for Type {
             }
             Type::Tuple(item_types) => fmt_collection("(", ",", ")", item_types.iter(), f),
             Type::FileHandle => f.write_str("file_handle"),
+            Type::Object(fields) => {
+                f.write_str("{ ")?;
+                let mut fields = fields.iter().collect::<Vec<_>>();
+                fields.sort_by_key(|(name, _)| *name);
+                let mut first = true;
+                for (key, field) in fields {
+                    if !first {
+                        f.write_str(", ")?;
+                    } else {
+                        first = false
+                    }
+                    f.write_str(&key)?;
+                    f.write_str(": ")?;
+                    field.value.fmt(f)?;
+                }
+
+                f.write_str(" }")?;
+
+                Ok(())
+            }
         }
     }
 }

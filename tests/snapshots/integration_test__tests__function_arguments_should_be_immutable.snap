@@ -5,8 +5,6 @@ expression: "run_code(r#\"\n        func function(value: string) {\n            
 stdout: ""
 stderr: ""
 error:
-  ExecutionError:
-    message: "Can't assign to a variable that is not mutable"
-    call_stack:
-      - function
-exit_code: 104
+  PostProcessError:
+    message: "Unable to assign to 'value' because it is not mutable"
+exit_code: 103

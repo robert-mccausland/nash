@@ -12,9 +12,11 @@ use crate::{
 };
 
 mod command;
+mod object;
 mod string;
 
 pub use command::CommandLiteral;
+pub use object::ObjectLiteral;
 use serde::Serialize;
 pub use string::StringLiteral;
 

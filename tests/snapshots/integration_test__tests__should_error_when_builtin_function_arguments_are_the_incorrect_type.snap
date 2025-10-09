@@ -6,5 +6,5 @@ stdout: ""
 stderr: ""
 error:
   PostProcessError:
-    message: Function not found
+    message: "Function with name 'glob' and type signature (integer) not found"
 exit_code: 103

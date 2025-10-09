@@ -29,7 +29,7 @@ use brackets::BracketExpression;
 use branch::BranchExpression;
 use collections::{ArrayExpression, TupleExpression};
 use index::IndexExpression;
-use literals::{BooleanLiteral, CommandLiteral, IntegerLiteral, StringLiteral};
+use literals::{BooleanLiteral, CommandLiteral, IntegerLiteral, ObjectLiteral, StringLiteral};
 use loops::{ForLoopExpression, WhileLoopExpression};
 use pipeline::PipelineExpression;
 use serde::Serialize;
@@ -172,6 +172,7 @@ expression_content!(
         BooleanLiteral,
         IntegerLiteral,
         CommandLiteral,
+        ObjectLiteral,
         ArrayExpression,
         // Note: brackets must be matched before tuples, as the tuple matcher will also match expressions
         // that should be bracket expressions.

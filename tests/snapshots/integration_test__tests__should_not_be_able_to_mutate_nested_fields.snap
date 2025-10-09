@@ -1,0 +1,10 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\n        var test = {\n            foo: {\n                bar: \"baz\"\n            }\n        };\n        test.foo.bar = \"bingo\";\n        \"#,\n    \"\", |_| {})"
+---
+stdout: ""
+stderr: ""
+error:
+  PostProcessError:
+    message: "Unable to assign to 'test.foo.bar' because it is not mutable"
+exit_code: 103

@@ -44,24 +44,54 @@ impl Statement {
     pub fn post_process(&self, context: &mut PostProcessContext) -> Result<(), PostProcessError> {
         match self {
             Statement::Declaration(name, variable_type) => {
-                context.declare_variable(name.value.clone(), variable_type.value.clone());
+                context.declare_variable(name.value.clone(), variable_type.value.clone(), true);
             }
-            Statement::DeclarationAssignment(_, assignment, value) => {
+            Statement::DeclarationAssignment(mutable, assignment, value) => {
                 let variable_type = value.get_type(context)?;
                 match assignment {
-                    Assignment::Simple(name) => {
-                        context.declare_variable(name.value.clone(), variable_type)
+                    Assignment::Simple(first, rest) => {
+                        assert!(
+                            rest.len() == 0,
+                            "Cannot have a declaration assignment with a object property assignment"
+                        );
+
+                        context.declare_variable(first.value.clone(), variable_type, *mutable)
                     }
                     Assignment::Tuple(_) => todo!(),
                 }
             }
             Statement::Assignment(assignment, value) => match assignment {
-                Assignment::Simple(name) => {
-                    let name = name.value.clone();
-                    let variable_type = context.find_variable(name.as_str()).ok_or::<PostProcessError>(
-                        format!("Unable to assign to variable '{name}' has it has not been declared yet").into()
+                Assignment::Simple(first, rest) => {
+                    let mut variable_name = first.value.clone();
+                    let variable = &context.find_variable(variable_name.as_str()).ok_or::<PostProcessError>(
+                        format!("Unable to assign to variable '{variable_name}' has it has not been declared yet").into()
                     )?;
+                    let mut variable_type = &variable.variable_type;
+                    let mut mutable = variable.mutable;
+
                     let value_type = value.get_type(context)?;
+                    for identifier in rest {
+                        let Type::Object(outer_type) = variable_type else {
+                            return Err(format!("Unable to assign a property to '{variable_name}' because it is not an object").into());
+                        };
+
+                        let inner_type = outer_type.get(&identifier.value).ok_or::<PostProcessError>(
+                            format!("Unable to assign to property '{identifier:?}' on '{variable_name}' because it has no such property").into()
+                        )?;
+
+                        variable_name += ".";
+                        variable_name += &identifier.value;
+                        variable_type = &inner_type.value;
+                        mutable = inner_type.mutable
+                    }
+
+                    if !mutable {
+                        return Err(format!(
+                            "Unable to assign to '{variable_name}' because it is not mutable"
+                        )
+                        .into());
+                    }
+
                     if !value_type.is_assignable_to(&variable_type) {
                         return Err(format!(
                             "Unable to assign a value of type '{value_type}' to a variable of type '{variable_type}'",
@@ -79,7 +109,6 @@ impl Statement {
                 };
 
                 // Currently everything is inside a root scope, but idk maybe at some point it wont be.
-                dbg!(&context);
                 if !context.has_parent_scope(&ScopeType::Root) {
                     return Err("Exit statement can only be used from inside the root scope".into());
                 }
@@ -133,8 +162,39 @@ impl Statement {
             Statement::Assignment(assignment, expression) => {
                 let result = expression.evaluate(stack, executor)?;
                 match assignment {
-                    Assignment::Simple(identifier) => {
-                        stack.assign_variable(&identifier.value, result)?;
+                    Assignment::Simple(identifier, rest) => {
+                        if rest.len() > 0 {
+                            let mut value = stack.resolve_variable(&identifier.value)?;
+                            let mut rest = rest.iter().peekable();
+                            loop {
+                                value = {
+                                    let next = rest.next().unwrap();
+                                    let Value::Object(ref object) = value else {
+                                        panic!("Unable to set field on non-object value");
+                                    };
+
+                                    if rest.peek().is_some() {
+                                        let object = object.borrow();
+                                        let field =
+                                            object.get(&next.value).expect("Invalid field name");
+                                        field.value.clone()
+                                    } else {
+                                        let mut object = object.borrow_mut();
+                                        let field = object
+                                            .get_mut(&next.value)
+                                            .expect("Invalid field name");
+                                        assert_eq!(
+                                            field.mutable, true,
+                                            "Can only assign to mutable fields"
+                                        );
+                                        field.value = result;
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            stack.assign_variable(&identifier.value, result)?;
+                        }
                     }
                     Assignment::Tuple(identifiers) => {
                         let Value::Tuple(result) = result else {
@@ -156,7 +216,11 @@ impl Statement {
             Statement::DeclarationAssignment(mutable, assignment, expression) => {
                 let result = expression.evaluate(stack, executor)?;
                 match assignment {
-                    Assignment::Simple(identifier) => {
+                    Assignment::Simple(identifier, rest) => {
+                        assert!(
+                            rest.len() == 0,
+                            "Cannot have a declaration assignment with a object property assignment"
+                        );
                         stack.declare_variable_init(&identifier.value, result, *mutable)?;
                     }
                     Assignment::Tuple(identifiers) => {
@@ -277,7 +341,7 @@ impl Statement {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum Assignment {
-    Simple(Identifier),
+    Simple(Identifier, Vec<Identifier>),
     Tuple(Vec<Identifier>),
 }
 
@@ -292,11 +356,23 @@ impl Assignment {
         tokens: &mut Backtrackable<I>,
     ) -> Option<Self> {
         let next = tokens.next_value();
+
         if let Some(TokenValue::Identifier(identifier)) = next {
-            return if let Some(TokenValue::Equals()) = tokens.next_value() {
-                Some(Assignment::Simple((*identifier).into()))
+            let first = (*identifier).into();
+            let mut rest = Vec::new();
+            while let Some(TokenValue::Dot()) = tokens.peek_value() {
+                tokens.next();
+                if let Some(TokenValue::Identifier(identifier)) = tokens.next_value() {
+                    rest.push((*identifier).into());
+                } else {
+                    return None;
+                }
+            }
+
+            if let Some(TokenValue::Equals()) = tokens.next_value() {
+                return Some(Assignment::Simple(first, rest));
             } else {
-                None
+                return None;
             };
         };
 

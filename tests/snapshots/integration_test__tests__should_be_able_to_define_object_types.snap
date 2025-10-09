@@ -1,0 +1,8 @@
+---
+source: tests/integration_test.rs
+expression: "run_code(r#\"\n        var mut another_object: { foo: string };\n        another_object = { foo: \"test\" };\n        out(another_object.fmt());\n        \"#,\n    \"\", |_| {})"
+---
+stdout: "{\n  foo: \"test\",\n}\n"
+stderr: ""
+error: ~
+exit_code: 0

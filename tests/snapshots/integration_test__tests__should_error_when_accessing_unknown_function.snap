@@ -6,5 +6,5 @@ stdout: ""
 stderr: ""
 error:
   PostProcessError:
-    message: Instance function not found
+    message: "Instance function with name 'do_the_hokey_pokey' and type signature () not found"
 exit_code: 103

@@ -547,7 +547,6 @@ out((1 + 2 + 3 + 4 * 10).fmt());
         should_error_if_command_returns_non_zero_exit_code,
         r#"
 exec `my_command`;
-out(code.fmt());
 "#,
         "",
         |executor| {
@@ -831,30 +830,7 @@ out((exit_code, stderr, exit_code_2, stderr_2).fmt());
         exec `command`|cap stderr|;
         stderr = "whatever";
         "#,
-        "",
-        |executor| {
-            executor
-                .expect_run_pipeline()
-                .with(predicate::eq::<Pipeline>(Pipeline::new(
-                    vec![CommandDefinition::new(
-                        "command".to_owned(),
-                        Vec::new(),
-                        true,
-                    )],
-                    None,
-                    None,
-                )))
-                .return_once(|_| {
-                    Ok(PipelineOutput {
-                        stdout: Some(String::new()),
-                        command_outputs: vec![CommandOutput::new(
-                            0,
-                            Some("test_stderr".to_owned()),
-                        )],
-                    })
-                })
-                .once();
-        }
+        ""
     );
 
     nash_test!(
@@ -1010,6 +986,113 @@ out((exit_code, stderr, exit_code_2, stderr_2).fmt());
         func test(): string {
             return 123;
         }
+        "#
+    );
+
+    nash_test!(
+        should_match_empty_object_instead_of_empty_block,
+        r#"
+        var test = {};
+        out(test.fmt());
+        "#
+    );
+
+    nash_test!(
+        should_be_able_to_create_objects,
+        r#"
+        var test = {
+            foo: "bar"
+        };
+        out(test.fmt());
+        "#
+    );
+
+    nash_test!(
+        should_be_able_to_create_large_objects,
+        r#"
+        var test = {
+            foo: "bar",
+            foo1: 1,
+            foo2: false,
+            foo3: `echo "test"`
+        };
+        out(test.fmt());
+        "#
+    );
+
+    nash_test!(
+        should_not_be_able_to_mutate_fields,
+        r#"
+        var test = {
+            foo: "bar",
+        };
+        test.foo = "baz";
+        "#
+    );
+
+    nash_test!(
+        should_not_be_able_to_mutate_nested_fields,
+        r#"
+        var test = {
+            foo: {
+                bar: "baz"
+            }
+        };
+        test.foo.bar = "bingo";
+        "#
+    );
+
+    nash_test!(
+        should_be_able_to_mutate_mutable_fields,
+        r#"
+        var test = {
+            mut foo: "bar",
+        };
+
+        test.foo = "baz";
+        out(test.foo);
+        "#
+    );
+
+    nash_test!(
+        should_be_able_to_mutate_nested_mutable_fields,
+        r#"
+        var test = {
+            mut foo: {
+                bar: "value",
+            },
+        };
+
+        test.foo = { bar: "value2" };
+        out(test.fmt());
+        "#
+    );
+
+    nash_test!(
+        should_not_be_able_to_change_field_type,
+        r#"
+        var test = {
+            mut foo: "bar",
+        };
+
+        test.foo = 123;
+        "#
+    );
+
+    nash_test!(
+        should_be_able_to_define_object_types,
+        r#"
+        var mut another_object: { foo: string };
+        another_object = { foo: "test" };
+        out(another_object.fmt());
+        "#
+    );
+
+    nash_test!(
+        should_error_when_assigning_incompatible_object_types,
+        r#"
+        var mut another_object: { foo: string };
+        another_object = { foo: 123 };
         "#
     );
 }

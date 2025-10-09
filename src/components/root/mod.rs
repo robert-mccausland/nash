@@ -52,14 +52,32 @@ impl Root {
     }
 
     pub fn post_process(&self, context: &mut PostProcessContext) -> Result<(), PostProcessError> {
-        // Add new variable scope for the root block
         context.scopes.push(Scope::new(ScopeType::Root));
+
+        // Add functions to context before processing them so they can call each other without
+        // the order of declaration mattering
+        for function in &self.functions {
+            let arguments = function
+                .arguments
+                .iter()
+                .map(|(_, type_definition)| type_definition.value.clone())
+                .collect();
+
+            context.functions.insert(
+                function.name.value.clone(),
+                (arguments, function.return_type.value.clone()),
+            );
+        }
 
         for function in &self.functions {
             function.code.post_process_with_initializer(
                 |context| {
                     for (name, value_type) in &function.arguments {
-                        context.declare_variable(name.value.clone(), value_type.value.clone())
+                        context.declare_variable(
+                            name.value.clone(),
+                            value_type.value.clone(),
+                            false,
+                        )
                     }
 
                     Ok(())
@@ -67,16 +85,6 @@ impl Root {
                 ScopeType::Function(function.return_type.value.clone()),
                 context,
             )?;
-
-            let arguments = function
-                .arguments
-                .iter()
-                .map(|(_, type_definition)| type_definition.value.clone())
-                .collect();
-            context.functions.insert(
-                function.name.value.clone(),
-                (arguments, function.return_type.value.clone()),
-            );
         }
 
         for statement in &self.statements {

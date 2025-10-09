@@ -89,7 +89,7 @@ impl ExpressionComponent for ForLoopExpression {
 
         self.loop_body.post_process_with_initializer(
             |context| {
-                context.declare_variable(self.item_name.value.clone(), *inner_type);
+                context.declare_variable(self.item_name.value.clone(), *inner_type, false);
                 Ok(())
             },
             ScopeType::Looped,
